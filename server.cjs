@@ -4,6 +4,7 @@ const path = require("node:path");
 
 const root = __dirname;
 const port = Number(process.env.PORT || 3000);
+const host = process.env.HOST || "0.0.0.0";
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -40,6 +41,6 @@ const server = http.createServer((request, response) => {
   });
 });
 
-server.listen(port, "127.0.0.1", () => {
+server.listen(port, host, () => {
   console.log(`Balans MVP preview: http://localhost:${port}`);
 });

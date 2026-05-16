@@ -37,23 +37,25 @@
               <input id="sleep-hours" type="text" inputmode="decimal" placeholder="Bijv. 7.5" />
             </label>
 
-            <label class="field">
-              <span class="field-row">
-                <span>Stress</span>
-                <strong id="stress-value">5/10</strong>
-              </span>
-              <input id="stress-score" type="range" min="1" max="10" value="5" />
-              <small><span>rustig</span><span>hoog</span></small>
-            </label>
+            <fieldset class="field">
+              <legend>Focus</legend>
+              <div class="segmented segmented-four" role="radiogroup" aria-label="Focus">
+                <button type="button" data-focus="slecht">Slecht</button>
+                <button type="button" data-focus="moeilijk">Moeilijk</button>
+                <button type="button" data-focus="prima" class="selected">Prima</button>
+                <button type="button" data-focus="scherp">Scherp</button>
+              </div>
+            </fieldset>
 
-            <label class="field">
-              <span class="field-row">
-                <span>Energie</span>
-                <strong id="energy-value">5/10</strong>
-              </span>
-              <input id="energy-score" type="range" min="1" max="10" value="5" />
-              <small><span>laag</span><span>veel</span></small>
-            </label>
+            <fieldset class="field">
+              <legend>Stemming</legend>
+              <div class="segmented segmented-four" role="radiogroup" aria-label="Stemming">
+                <button type="button" data-mood="slecht">Slecht</button>
+                <button type="button" data-mood="neutraal" class="selected">Neutraal</button>
+                <button type="button" data-mood="goed">Goed</button>
+                <button type="button" data-mood="heel-goed">Heel goed</button>
+              </div>
+            </fieldset>
 
             <fieldset class="field">
               <legend>Voeding</legend>
@@ -92,12 +94,37 @@
         </header>
         <div id="week-content"></div>
       </section>
+
+      <section class="screen" id="screen-settings" aria-labelledby="settings-title">
+        <header class="page-header">
+          <p class="eyebrow">Instellingen</p>
+          <h1 id="settings-title">Maak Balans van jou</h1>
+        </header>
+
+        <div class="stack">
+          <div class="card settings-card">
+            <div>
+              <h2>Weergave</h2>
+              <p>Pas aan hoe de app eruitziet op dit apparaat.</p>
+            </div>
+
+            <label class="setting-row" for="dark-mode-toggle">
+              <span>
+                <strong>Dark mode</strong>
+                <small>Rustiger licht in de avond.</small>
+              </span>
+              <input id="dark-mode-toggle" type="checkbox" role="switch" />
+            </label>
+          </div>
+        </div>
+      </section>
     </main>
 
     <nav class="bottom-nav" aria-label="Navigatie">
       <button type="button" data-screen="today" class="active"><span>H</span>Vandaag</button>
       <button type="button" data-screen="checkin"><span>+</span>Check-in</button>
       <button type="button" data-screen="week"><span>%</span>Progressie</button>
+      <button type="button" data-screen="settings"><span>*</span>Instellingen</button>
     </nav>
 
     <script src="app.js"></script>
