@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Balans" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>Balans MVP</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="public/app-icon.svg" />
+    <link rel="apple-touch-icon" href="public/app-icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="screen active" id="screen-today" aria-labelledby="today-title">
+        <header class="page-header">
+          <p class="eyebrow">Balans</p>
+          <h1 id="today-title">Waarom voel ik me vandaag zo?</h1>
+          <p class="date-label" id="today-date"></p>
+        </header>
+        <div id="today-content"></div>
+      </section>
+
+      <section class="screen" id="screen-checkin" aria-labelledby="checkin-title">
+        <header class="page-header">
+          <p class="eyebrow">Check-in</p>
+          <h1 id="checkin-title">Hoe is je basis vandaag?</h1>
+        </header>
+
+        <form class="stack" id="checkin-form">
+          <div class="card form-card">
+            <label class="field">
+              <span>Slaapuren</span>
+              <input id="sleep-hours" type="text" inputmode="decimal" placeholder="Bijv. 7.5" />
+            </label>
+
+            <label class="field">
+              <span class="field-row">
+                <span>Stress</span>
+                <strong id="stress-value">5/10</strong>
+              </span>
+              <input id="stress-score" type="range" min="1" max="10" value="5" />
+              <small><span>rustig</span><span>hoog</span></small>
+            </label>
+
+            <label class="field">
+              <span class="field-row">
+                <span>Energie</span>
+                <strong id="energy-value">5/10</strong>
+              </span>
+              <input id="energy-score" type="range" min="1" max="10" value="5" />
+              <small><span>laag</span><span>veel</span></small>
+            </label>
+
+            <fieldset class="field">
+              <legend>Voeding</legend>
+              <div class="segmented" role="radiogroup" aria-label="Voeding">
+                <button type="button" data-nutrition="slecht">Slecht</button>
+                <button type="button" data-nutrition="oke" class="selected">Oke</button>
+                <button type="button" data-nutrition="goed">Goed</button>
+              </div>
+            </fieldset>
+
+            <label class="field">
+              <span>Korte notitie</span>
+              <textarea id="day-note" rows="4" maxlength="240" placeholder="Wat viel vandaag op?"></textarea>
+            </label>
+
+            <p class="error-message" id="form-error" role="alert"></p>
+          </div>
+
+          <button class="primary-button" type="submit">Opslaan en analyse bekijken</button>
+        </form>
+      </section>
+
+      <section class="screen" id="screen-result" aria-labelledby="result-title">
+        <header class="page-header">
+          <p class="eyebrow">Resultaat</p>
+          <h1 id="result-title">Je analyse</h1>
+          <p class="date-label" id="result-date"></p>
+        </header>
+        <div class="stack" id="result-content"></div>
+      </section>
+
+      <section class="screen" id="screen-week" aria-labelledby="week-title">
+        <header class="page-header">
+          <p class="eyebrow">Progressie</p>
+          <h1 id="week-title">Discipline door zichtbare progressie</h1>
+        </header>
+        <div id="week-content"></div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Navigatie">
+      <button type="button" data-screen="today" class="active"><span>H</span>Vandaag</button>
+      <button type="button" data-screen="checkin"><span>+</span>Check-in</button>
+      <button type="button" data-screen="week"><span>%</span>Progressie</button>
+    </nav>
+
+    <script src="app.js"></script>
+  </body>
+</html>
