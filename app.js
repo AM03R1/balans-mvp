@@ -1,12 +1,19 @@
 const STORAGE_KEY = "balans-mvp-checkins";
+const THEME_STORAGE_KEY = "balans-mvp-theme";
 const nutritionButtons = [...document.querySelectorAll("[data-nutrition]")];
+const focusButtons = [...document.querySelectorAll("[data-focus]")];
+const moodButtons = [...document.querySelectorAll("[data-mood]")];
+const darkModeToggle = document.querySelector("#dark-mode-toggle");
 let selectedNutrition = "oke";
+let selectedFocus = "prima";
+let selectedMood = "neutraal";
 
 const screens = {
   today: document.querySelector("#screen-today"),
   checkin: document.querySelector("#screen-checkin"),
   result: document.querySelector("#screen-result"),
   week: document.querySelector("#screen-week"),
+  settings: document.querySelector("#screen-settings"),
 };
 
 const today = todayKey();
@@ -18,19 +25,29 @@ document.querySelectorAll("[data-screen]").forEach((button) => {
   button.addEventListener("click", () => showScreen(button.dataset.screen));
 });
 
-document.querySelector("#stress-score").addEventListener("input", (event) => {
-  document.querySelector("#stress-value").textContent = `${event.target.value}/10`;
-});
-
-document.querySelector("#energy-score").addEventListener("input", (event) => {
-  document.querySelector("#energy-value").textContent = `${event.target.value}/10`;
-});
-
 nutritionButtons.forEach((button) => {
   button.addEventListener("click", () => {
     selectedNutrition = button.dataset.nutrition;
     nutritionButtons.forEach((item) => item.classList.toggle("selected", item === button));
   });
+});
+
+focusButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    selectedFocus = normalizeFocus(button.dataset.focus);
+    focusButtons.forEach((item) => item.classList.toggle("selected", item === button));
+  });
+});
+
+moodButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    selectedMood = normalizeMood(button.dataset.mood);
+    moodButtons.forEach((item) => item.classList.toggle("selected", item === button));
+  });
+});
+
+darkModeToggle.addEventListener("change", () => {
+  setTheme(darkModeToggle.checked ? "dark" : "light");
 });
 
 document.querySelector("#checkin-form").addEventListener("submit", (event) => {
@@ -49,8 +66,8 @@ document.querySelector("#checkin-form").addEventListener("submit", (event) => {
   saveCheckIn({
     date: today,
     sleepHours,
-    stress: Number(document.querySelector("#stress-score").value),
-    energy: Number(document.querySelector("#energy-score").value),
+    focus: selectedFocus,
+    mood: selectedMood,
     nutrition: selectedNutrition,
     note: document.querySelector("#day-note").value.trim(),
     updatedAt: new Date().toISOString(),
@@ -65,6 +82,7 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") {
 }
 
 loadTodayIntoForm();
+setTheme(readThemePreference());
 renderAll();
 
 function showScreen(name) {
@@ -85,18 +103,42 @@ function renderAll() {
   renderWeek();
 }
 
+function readThemePreference() {
+  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+
+  if (savedTheme === "dark" || savedTheme === "light") {
+    return savedTheme;
+  }
+
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function setTheme(theme) {
+  const isDarkMode = theme === "dark";
+
+  document.body.classList.toggle("dark-mode", isDarkMode);
+  darkModeToggle.checked = isDarkMode;
+  localStorage.setItem(THEME_STORAGE_KEY, isDarkMode ? "dark" : "light");
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", isDarkMode ? "#111827" : "#ffffff");
+}
+
 function renderToday() {
-  const checkIn = getCheckInByDate(today);
+  const checkIns = getCheckIns();
+  const checkIn = checkIns.find((entry) => entry.date === today) || null;
   const target = document.querySelector("#today-content");
+  const personalInsight = getSimplePersonalInsight(checkIns);
 
   if (!checkIn) {
     target.innerHTML = `
-      <div class="card empty-state">
-        <h2>Nog geen check-in vandaag</h2>
-        <p>Je hoeft niet perfect te zijn. Consistentie telt.</p>
-        <div class="actions">
-          <button class="primary-button" type="button" onclick="showScreen('checkin')">Start check-in</button>
+      <div class="stack">
+        <div class="card empty-state">
+          <h2>Nog geen check-in vandaag</h2>
+          <p>Je hoeft niet perfect te zijn. Consistentie telt.</p>
+          <div class="actions">
+            <button class="primary-button" type="button" onclick="showScreen('checkin')">Start check-in</button>
+          </div>
         </div>
+        ${personalInsightCard(personalInsight)}
       </div>
     `;
     return;
@@ -111,17 +153,20 @@ function renderToday() {
         <div class="metric-grid">
           ${metric("Score", balance.score)}
           ${metric("Slaap", `${checkIn.sleepHours}u`)}
-          ${metric("Stress", checkIn.stress)}
+          ${metric("Focus", getFocusLabel(checkIn.focus))}
         </div>
       </div>
+      ${personalInsightCard(personalInsight)}
       ${insightCard(checkIn)}
+      ${coachMomentCard(getDailyCoachMoment(checkIn, checkIns))}
       <button class="secondary-button" type="button" onclick="showScreen('checkin')">Check-in aanpassen</button>
     </div>
   `;
 }
 
 function renderResult() {
-  const checkIn = getCheckInByDate(today);
+  const checkIns = getCheckIns();
+  const checkIn = checkIns.find((entry) => entry.date === today) || null;
   const target = document.querySelector("#result-content");
 
   if (!checkIn) {
@@ -137,6 +182,7 @@ function renderResult() {
 
   target.innerHTML = `
     ${insightCard(checkIn)}
+    ${coachMomentCard(getDailyCoachMoment(checkIn, checkIns))}
     ${checkIn.note ? `<div class="card"><strong>Je notitie</strong><p>${escapeHtml(checkIn.note)}</p></div>` : ""}
     <button class="primary-button" type="button" onclick="showScreen('week')">Bekijk progressie</button>
     <button class="secondary-button" type="button" onclick="showScreen('checkin')">Aanpassen</button>
@@ -180,8 +226,8 @@ function renderWeek() {
       <div class="card">
         <div class="week-grid">
           ${metric("Slaap", `${stats.averageSleep}u`)}
-          ${metric("Stress", `${stats.averageStress}/10`)}
-          ${metric("Energie", `${stats.averageEnergy}/10`)}
+          ${metric("Focus", stats.averageFocus)}
+          ${metric("Stemming", stats.averageMood)}
           ${metric("Verschil", formatDelta(comparison.balanceDelta))}
         </div>
       </div>
@@ -217,10 +263,196 @@ function metric(label, value) {
   return `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`;
 }
 
+function personalInsightCard(insight) {
+  return `
+    <div class="card">
+      <p class="analysis-label">Persoonlijk inzicht</p>
+      <h2 class="analysis-title">${insight.title}</h2>
+      <p class="analysis-text">${insight.explanation}</p>
+      ${insight.action ? `<div class="tip-box"><strong>Coachactie</strong><p>${insight.action}</p></div>` : ""}
+    </div>
+  `;
+}
+
+function coachMomentCard(moment) {
+  return `
+    <div class="card">
+      <p class="analysis-label">Dagelijks coachmoment</p>
+      <h2 class="analysis-title">${moment.observation}</h2>
+      <p class="analysis-text">${moment.explanation}</p>
+      <div class="tip-box">
+        <strong>Kleine stap voor vandaag</strong>
+        <p>${moment.action}</p>
+      </div>
+    </div>
+  `;
+}
+
+function getDailyCoachMoment(entry, entries) {
+  const checkIn = normalizeCheckIn(entry);
+  const safeEntries = Array.isArray(entries) ? entries.map(normalizeCheckIn).filter(Boolean) : [];
+
+  if (!checkIn) {
+    return {
+      observation: "Je hoeft vandaag nog niets te verklaren.",
+      explanation: "Een korte check-in is genoeg om iets meer zicht te krijgen op hoe je erbij zit.",
+      action: "Kies straks een rustig moment om je basis eerlijk in te vullen.",
+    };
+  }
+
+  const history = safeEntries.filter((item) => item.date !== checkIn.date);
+  const balance = calculateBalanceScore(checkIn).score;
+  const historyAverage = history.length ? average(history.map((item) => calculateBalanceScore(item).score)) : null;
+  const isLowerThanUsual = historyAverage !== null && balance < historyAverage - 10;
+  const hasShortSleep = checkIn.sleepHours > 0 && checkIn.sleepHours < 6;
+  const hasLowFocus = checkIn.focus === "slecht" || checkIn.focus === "moeilijk";
+  const hasLowMood = checkIn.mood === "slecht";
+
+  if (hasShortSleep && hasLowMood) {
+    return {
+      observation: "Je stemming lijkt vandaag wat lager en je slaap was kort.",
+      explanation: "Dat is geen falen, maar een signaal dat je systeem waarschijnlijk wat minder ruimte heeft.",
+      action: "Doe het vandaag iets rustiger en kies een taak die klein genoeg voelt om te starten.",
+    };
+  }
+
+  if (hasLowFocus) {
+    return {
+      observation: "Focussen lijkt vandaag wat meer moeite te kosten.",
+      explanation: "Dat kan gebeuren op dagen waarop je hoofd voller is. Je hoeft niet alles tegelijk op te lossen.",
+      action: "Kies een kleine taak en neem daarna bewust 10 minuten pauze zonder scherm.",
+    };
+  }
+
+  if (hasLowMood) {
+    return {
+      observation: "Je stemming lijkt vandaag wat lager.",
+      explanation: "Zie dit als informatie, niet als oordeel. Morgen kun je opnieuw bijsturen.",
+      action: "Maak vandaag ruimte voor een rustig moment zonder iets te moeten verbeteren.",
+    };
+  }
+
+  if (checkIn.nutrition === "slecht") {
+    return {
+      observation: "Je voeding lijkt vandaag wat minder steun te geven.",
+      explanation: "Een dag hoeft niet perfect te zijn om toch een kleine herstelkeuze te maken.",
+      action: "Kies vandaag een eenvoudige voedzame maaltijd of snack die weinig moeite kost.",
+    };
+  }
+
+  if (isLowerThanUsual) {
+    return {
+      observation: "Vandaag lijkt wat zwaarder dan je gemiddelde dag.",
+      explanation: "Dat verschil hoeft geen probleem te zijn. Het kan helpen om je tempo tijdelijk aan te passen.",
+      action: "Maak je dag kleiner: kies een ding dat belangrijk is en laat de rest zachter worden.",
+    };
+  }
+
+  if ((checkIn.mood === "goed" || checkIn.mood === "heel-goed") && (checkIn.focus === "prima" || checkIn.focus === "scherp")) {
+    return {
+      observation: "Je basis lijkt vandaag redelijk stevig.",
+      explanation: "Dit is een goed moment om rustig momentum vast te houden zonder jezelf te overvragen.",
+      action: "Gebruik je energie voor een kleine bewuste stap en stop voordat het te veel wordt.",
+    };
+  }
+
+  return {
+    observation: "Je check-in geeft vandaag een neutraal signaal.",
+    explanation: "Niet elke dag hoeft een duidelijk patroon te hebben. Bewust opmerken is al waardevol.",
+    action: "Kies vandaag een haalbare stap en kijk vanavond kort wat die met je deed.",
+  };
+}
+
+function getSimplePersonalInsight(entries) {
+  const validEntries = Array.isArray(entries)
+    ? entries
+        .map((entry) => ({
+          ...entry,
+          sleepHours: Number(entry?.sleepHours),
+          focus: normalizeFocus(entry?.focus, entry?.stress),
+          mood: normalizeMood(entry?.mood, entry?.energy),
+          nutrition: normalizeNutrition(entry?.nutrition),
+        }))
+        .filter((entry) => {
+          return (
+            Number.isFinite(entry.sleepHours) &&
+            entry.sleepHours >= 0 &&
+            entry.focus &&
+            entry.mood
+          );
+        })
+    : [];
+
+  if (validEntries.length < 3) {
+    return {
+      title: "Check nog een paar dagen in om persoonlijke patronen te ontdekken.",
+      explanation: "Vanaf drie check-ins kan Balans simpele verbanden herkennen.",
+      action: "",
+    };
+  }
+
+  const patterns = [
+    {
+      matches: (entry) => entry.focus === "slecht" || entry.focus === "moeilijk",
+      title: "Je balans lijkt lager op dagen waarop focussen lastig is.",
+      explanation: "Op dagen met focus slecht of moeilijk scoor je gemiddeld lager.",
+      action: "Kies vandaag een kleine taak en zet meldingen 10 minuten uit.",
+    },
+    {
+      matches: (entry) => entry.sleepHours < 6,
+      title: "Je balans lijkt lager na korte nachten.",
+      explanation: "Op dagen met minder dan 6 uur slaap scoor je gemiddeld lager.",
+      action: "Plan vanavond een vaste bedtijd en leg je scherm eerder weg.",
+    },
+    {
+      matches: (entry) => entry.mood === "slecht",
+      title: "Je balans lijkt lager op dagen met een slechte stemming.",
+      explanation: "Op dagen waarop je stemming slecht is, scoor je gemiddeld lager.",
+      action: "Maak vandaag ruimte voor iets kleins dat je hoofd rust geeft.",
+    },
+    {
+      matches: (entry) => entry.nutrition === "slecht",
+      title: "Je balans lijkt lager op dagen met slechte voeding.",
+      explanation: "Op dagen waarop je voeding slecht invult, scoor je gemiddeld lager.",
+      action: "Eet vandaag een normale maaltijd met genoeg eiwitten.",
+    },
+  ];
+
+  const overallAverage = average(validEntries.map((entry) => calculateBalanceScore(entry).score));
+  const candidates = patterns
+    .map((pattern) => {
+      const matchingEntries = validEntries.filter(pattern.matches);
+      const matchingAverage = average(matchingEntries.map((entry) => calculateBalanceScore(entry).score));
+
+      return {
+        ...pattern,
+        count: matchingEntries.length,
+        impact: overallAverage - matchingAverage,
+      };
+    })
+    .filter((pattern) => pattern.count > 0 && pattern.impact > 0)
+    .sort((a, b) => b.impact - a.impact || b.count - a.count);
+
+  if (!candidates.length) {
+    return {
+      title: "Je check-ins laten nog geen duidelijk risicopatroon zien.",
+      explanation: "De opvallende signalen uit deze MVP komen nog weinig voor in je data.",
+      action: "Blijf vandaag gewoon eerlijk inchecken, ook als het een normale dag is.",
+    };
+  }
+
+  const strongestPattern = candidates[0];
+  return {
+    title: strongestPattern.title,
+    explanation: strongestPattern.explanation,
+    action: `Coachactie: ${strongestPattern.action}`,
+  };
+}
+
 function createInsight(checkIn) {
   const balance = calculateBalanceScore(checkIn);
   return {
-    title: checkIn.energy <= 5 ? "Je lichaam vraagt om herstel" : "Je balans ziet er werkbaar uit",
+    title: getMoodScore(checkIn.mood) < 70 ? "Je basis vraagt om wat zachtheid" : "Je balans ziet er werkbaar uit",
     cause: balance.explanation,
     context: balance.factorText,
     tip: getDailyCoachAction(checkIn),
@@ -230,10 +462,10 @@ function createInsight(checkIn) {
 
 function calculateBalanceScore(checkIn) {
   const sleep = calculateSleepScore(checkIn.sleepHours);
-  const stress = clampScore((10 - checkIn.stress) * 10 + 10);
-  const energy = clampScore(checkIn.energy * 10);
+  const focus = getFocusScore(checkIn.focus);
+  const mood = getMoodScore(checkIn.mood);
   const nutrition = getNutritionScore(checkIn.nutrition);
-  const score = clampScore(Math.round(sleep * 0.3 + stress * 0.3 + energy * 0.25 + nutrition * 0.15));
+  const score = clampScore(Math.round(sleep * 0.3 + focus * 0.3 + mood * 0.25 + nutrition * 0.15));
   const mainFactor = getMainInfluencingFactor(checkIn);
 
   return {
@@ -269,8 +501,8 @@ function calculateDisciplineScore(checkIns) {
 function getMainInfluencingFactor(checkIn) {
   const factors = [
     { factor: "slaap", gap: 100 - calculateSleepScore(checkIn.sleepHours) },
-    { factor: "stress", gap: 100 - clampScore((10 - checkIn.stress) * 10 + 10) },
-    { factor: "energie", gap: 100 - clampScore(checkIn.energy * 10) },
+    { factor: "focus", gap: 100 - getFocusScore(checkIn.focus) },
+    { factor: "stemming", gap: 100 - getMoodScore(checkIn.mood) },
     { factor: "voeding", gap: 100 - getNutritionScore(checkIn.nutrition) },
   ];
 
@@ -281,8 +513,8 @@ function getDailyCoachAction(checkIn) {
   const factor = getMainInfluencingFactor(checkIn);
 
   if (factor === "slaap" && checkIn.sleepHours < 7) return "Ga vanavond 30 minuten eerder naar bed.";
-  if (factor === "stress" && checkIn.stress > 6) return "Plan vandaag 10 minuten zonder scherm.";
-  if (factor === "energie" && checkIn.energy < 7) return "Kies een belangrijke taak en laat de rest even liggen.";
+  if (factor === "focus" && (checkIn.focus === "slecht" || checkIn.focus === "moeilijk")) return "Kies een kleine taak en zet meldingen 10 minuten uit.";
+  if (factor === "stemming" && checkIn.mood === "slecht") return "Maak vandaag ruimte voor iets kleins dat je hoofd rust geeft.";
   if (factor === "voeding" && checkIn.nutrition !== "goed") return "Eet vandaag een normale maaltijd met genoeg eiwitten.";
   return "Houd hetzelfde ritme morgen vast.";
 }
@@ -294,17 +526,17 @@ function compareWithPreviousWeek(checkIns) {
   const previous = calculateAverages(previousEntries);
   const hasPreviousWeek = previousEntries.length > 0;
   const sleepDeltaMinutes = Math.round((current.sleep - previous.sleep) * 60);
-  const stressDelta = roundOne(previous.stress - current.stress);
-  const energyDelta = roundOne(current.energy - previous.energy);
+  const focusDelta = Math.round(current.focus - previous.focus);
+  const moodDelta = Math.round(current.mood - previous.mood);
   const balanceDelta = Math.round(current.balance - previous.balance);
 
   return {
     balanceDelta,
     sleepDeltaMinutes,
-    stressDelta,
-    energyDelta,
+    focusDelta,
+    moodDelta,
     bestImprovement: hasPreviousWeek
-      ? getBestImprovement(sleepDeltaMinutes, stressDelta, energyDelta, balanceDelta)
+      ? getBestImprovement(sleepDeltaMinutes, focusDelta, moodDelta, balanceDelta)
       : `Je hebt ${currentEntries.length} ${currentEntries.length === 1 ? "dag" : "dagen"} ingecheckt deze week.`,
   };
 }
@@ -314,14 +546,14 @@ function calculateWeeklyStats(checkIns) {
   const discipline = calculateDisciplineScore(checkIns);
 
   if (!entries.length) {
-    return { averageSleep: 0, averageStress: 0, averageEnergy: 0, averageBalanceScore: 0, averageDisciplineScore: discipline.score, daysFilled: 0 };
+    return { averageSleep: 0, averageFocus: "-", averageMood: "-", averageBalanceScore: 0, averageDisciplineScore: discipline.score, daysFilled: 0 };
   }
 
   const averages = calculateAverages(entries);
   return {
     averageSleep: roundOne(averages.sleep),
-    averageStress: roundOne(averages.stress),
-    averageEnergy: roundOne(averages.energy),
+    averageFocus: getFocusLabelFromScore(averages.focus),
+    averageMood: getMoodLabelFromScore(averages.mood),
     averageBalanceScore: Math.round(averages.balance),
     averageDisciplineScore: discipline.score,
     daysFilled: entries.length,
@@ -350,8 +582,8 @@ function createBalanceExplanation(score, factor) {
 function createFactorText(factor) {
   const text = {
     slaap: "Slaap heeft vandaag de meeste invloed op je score.",
-    stress: "Vandaag lijkt je stress je energie het meest te beinvloeden.",
-    energie: "Je energieniveau drukt vandaag het sterkst op je balans.",
+    focus: "Focus drukt vandaag het sterkst op je balans.",
+    stemming: "Je stemming weegt vandaag duidelijk mee in je balans.",
     voeding: "Voeding is vandaag de factor met de meeste ruimte voor verbetering.",
   };
 
@@ -381,38 +613,38 @@ function calculateStabilityScore(currentEntries, previousEntries) {
 function calculateVarianceScore(entries) {
   const averages = calculateAverages(entries);
   const drift = entries.reduce((sum, entry) => {
-    return sum + Math.abs(entry.sleepHours - averages.sleep) + Math.abs(entry.stress - averages.stress) + Math.abs(entry.energy - averages.energy);
+    return sum + Math.abs(entry.sleepHours - averages.sleep) + Math.abs(getFocusScore(entry.focus) - averages.focus) / 10 + Math.abs(getMoodScore(entry.mood) - averages.mood) / 10;
   }, 0);
 
   return Math.max(0, 30 - drift);
 }
 
 function calculateAverages(entries) {
-  if (!entries.length) return { sleep: 0, stress: 0, energy: 0, balance: 0 };
+  if (!entries.length) return { sleep: 0, focus: 0, mood: 0, balance: 0 };
 
   const totals = entries.reduce(
     (sum, entry) => ({
       sleep: sum.sleep + entry.sleepHours,
-      stress: sum.stress + entry.stress,
-      energy: sum.energy + entry.energy,
+      focus: sum.focus + getFocusScore(entry.focus),
+      mood: sum.mood + getMoodScore(entry.mood),
       balance: sum.balance + calculateBalanceScore(entry).score,
     }),
-    { sleep: 0, stress: 0, energy: 0, balance: 0 },
+    { sleep: 0, focus: 0, mood: 0, balance: 0 },
   );
 
   return {
     sleep: totals.sleep / entries.length,
-    stress: totals.stress / entries.length,
-    energy: totals.energy / entries.length,
+    focus: totals.focus / entries.length,
+    mood: totals.mood / entries.length,
     balance: totals.balance / entries.length,
   };
 }
 
-function getBestImprovement(sleepDeltaMinutes, stressDelta, energyDelta, balanceDelta) {
+function getBestImprovement(sleepDeltaMinutes, focusDelta, moodDelta, balanceDelta) {
   const improvements = [
     { value: sleepDeltaMinutes, text: sleepDeltaMinutes > 0 ? `Je slaap is gemiddeld ${sleepDeltaMinutes} minuten beter dan vorige week.` : "" },
-    { value: stressDelta * 30, text: stressDelta > 0 ? `Je stress is ${stressDelta} punten lager dan vorige week.` : "" },
-    { value: energyDelta * 30, text: energyDelta > 0 ? `Je energie is ${energyDelta} punten hoger dan vorige week.` : "" },
+    { value: focusDelta, text: focusDelta > 0 ? "Je focus is gemiddeld beter dan vorige week." : "" },
+    { value: moodDelta, text: moodDelta > 0 ? "Je stemming is gemiddeld beter dan vorige week." : "" },
     { value: balanceDelta, text: balanceDelta > 0 ? "Je bent consistenter dan vorige week." : "" },
   ].filter((item) => item.text);
 
@@ -424,12 +656,16 @@ function loadTodayIntoForm() {
   if (!checkIn) return;
 
   document.querySelector("#sleep-hours").value = checkIn.sleepHours;
-  document.querySelector("#stress-score").value = checkIn.stress;
-  document.querySelector("#energy-score").value = checkIn.energy;
   document.querySelector("#day-note").value = checkIn.note || "";
-  document.querySelector("#stress-value").textContent = `${checkIn.stress}/10`;
-  document.querySelector("#energy-value").textContent = `${checkIn.energy}/10`;
+  selectedFocus = normalizeFocus(checkIn.focus);
+  selectedMood = normalizeMood(checkIn.mood);
   selectedNutrition = normalizeNutrition(checkIn.nutrition);
+  focusButtons.forEach((button) => {
+    button.classList.toggle("selected", button.dataset.focus === selectedFocus);
+  });
+  moodButtons.forEach((button) => {
+    button.classList.toggle("selected", button.dataset.mood === selectedMood);
+  });
   nutritionButtons.forEach((button) => {
     button.classList.toggle("selected", button.dataset.nutrition === selectedNutrition);
   });
@@ -438,7 +674,7 @@ function loadTodayIntoForm() {
 function getCheckIns() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    return Array.isArray(parsed) ? parsed.map((entry) => ({ ...entry, nutrition: normalizeNutrition(entry.nutrition) })) : [];
+    return Array.isArray(parsed) ? parsed.map(normalizeCheckIn).filter(Boolean) : [];
   } catch {
     return [];
   }
@@ -504,12 +740,108 @@ function normalizeNutrition(value) {
   return value === "goed" || value === "slecht" ? value : "oke";
 }
 
+function normalizeCheckIn(entry) {
+  if (!entry || typeof entry !== "object") return null;
+
+  const sleepHours = Number(entry.sleepHours);
+  return {
+    ...entry,
+    sleepHours: Number.isFinite(sleepHours) ? sleepHours : 0,
+    focus: normalizeFocus(entry.focus, entry.stress),
+    mood: normalizeMood(entry.mood, entry.energy),
+    nutrition: normalizeNutrition(entry.nutrition),
+  };
+}
+
+function normalizeFocus(value, oldStress) {
+  if (value === "slecht" || value === "moeilijk" || value === "prima" || value === "scherp") return value;
+
+  const stress = Number(oldStress);
+  if (Number.isFinite(stress)) {
+    if (stress >= 9) return "slecht";
+    if (stress >= 7) return "moeilijk";
+    if (stress <= 3) return "scherp";
+  }
+
+  return "prima";
+}
+
+function normalizeMood(value, oldEnergy) {
+  if (value === "slecht" || value === "neutraal" || value === "goed" || value === "heel-goed") return value;
+
+  const energy = Number(oldEnergy);
+  if (Number.isFinite(energy)) {
+    if (energy <= 4) return "slecht";
+    if (energy <= 6) return "neutraal";
+    if (energy <= 8) return "goed";
+    return "heel-goed";
+  }
+
+  return "neutraal";
+}
+
+function getFocusScore(focus) {
+  return {
+    slecht: 35,
+    moeilijk: 60,
+    prima: 78,
+    scherp: 100,
+  }[normalizeFocus(focus)];
+}
+
+function getMoodScore(mood) {
+  return {
+    slecht: 35,
+    neutraal: 62,
+    goed: 82,
+    "heel-goed": 100,
+  }[normalizeMood(mood)];
+}
+
+function getFocusLabel(focus) {
+  return {
+    slecht: "Slecht",
+    moeilijk: "Moeilijk",
+    prima: "Prima",
+    scherp: "Scherp",
+  }[normalizeFocus(focus)];
+}
+
+function getMoodLabel(mood) {
+  return {
+    slecht: "Slecht",
+    neutraal: "Neutraal",
+    goed: "Goed",
+    "heel-goed": "Heel goed",
+  }[normalizeMood(mood)];
+}
+
+function getFocusLabelFromScore(score) {
+  if (score >= 90) return "Scherp";
+  if (score >= 70) return "Prima";
+  if (score >= 48) return "Moeilijk";
+  return "Slecht";
+}
+
+function getMoodLabelFromScore(score) {
+  if (score >= 91) return "Heel goed";
+  if (score >= 72) return "Goed";
+  if (score >= 48) return "Neutraal";
+  return "Slecht";
+}
+
 function formatDelta(value) {
   return value > 0 ? `+${value}` : String(value);
 }
 
 function roundOne(value) {
   return Math.round(value * 10) / 10;
+}
+
+function average(values) {
+  const validValues = values.filter((value) => Number.isFinite(value));
+  if (!validValues.length) return 0;
+  return validValues.reduce((sum, value) => sum + value, 0) / validValues.length;
 }
 
 function clampScore(value) {
