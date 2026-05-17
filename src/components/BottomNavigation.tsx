@@ -7,6 +7,7 @@ const items = [
   { href: "/", label: "Vandaag", icon: "H" },
   { href: "/check-in", label: "Check-in", icon: "+" },
   { href: "/week", label: "Progressie", icon: "%" },
+  { href: "/buddy", label: "Buddy", icon: "B" },
 ];
 
 export function BottomNavigation() {
@@ -14,7 +15,7 @@ export function BottomNavigation() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-md border-t border-[#dde3ea] bg-white/90 px-4 py-2 safe-bottom backdrop-blur">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         {items.map((item) => {
           const isActive = pathname === item.href;
 

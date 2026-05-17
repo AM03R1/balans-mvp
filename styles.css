@@ -50,15 +50,18 @@ body.dark-mode {
 }
 
 html {
-  min-height: 100%;
+  height: 100%;
   background: var(--bg);
+  overflow: hidden;
 }
 
 body {
-  min-height: 100%;
+  height: 100%;
   margin: 0;
   background: var(--bg);
   color: var(--text);
+  overflow: hidden;
+  position: relative;
 }
 
 button,
@@ -73,10 +76,47 @@ button {
 }
 
 .app-shell {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  z-index: 1;
   width: min(100%, 28rem);
-  min-height: 100dvh;
+  height: auto;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
   margin: 0 auto;
-  padding: calc(1.15rem + env(safe-area-inset-top)) 1rem calc(6.5rem + env(safe-area-inset-bottom));
+  padding: 0 1rem calc(6.5rem + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+}
+
+.app-topbar {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 52px;
+  gap: 12px;
+  align-items: flex-start;
+  width: auto;
+  margin: 0 -1rem 18px;
+  padding: calc(1.15rem + env(safe-area-inset-top)) 1rem 14px;
+  background: var(--bg);
+}
+
+.app-topbar::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -18px;
+  left: 0;
+  height: 18px;
+  background: linear-gradient(to bottom, var(--bg), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+
+.app-topbar-copy {
+  min-width: 0;
 }
 
 .screen {
@@ -88,7 +128,7 @@ button {
 }
 
 .page-header {
-  margin-bottom: 18px;
+  display: none;
 }
 
 .eyebrow {
@@ -398,6 +438,84 @@ textarea:focus {
   color: var(--muted);
 }
 
+.buddy-card {
+  display: grid;
+  gap: 14px;
+}
+
+.buddy-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.buddy-close {
+  min-height: 36px;
+  padding: 7px 12px;
+  font-size: 0.84rem;
+}
+
+.buddy-disclaimer {
+  margin: 0;
+  border-radius: 8px;
+  background: var(--danger-bg);
+  padding: 12px;
+  color: var(--danger-text);
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.buddy-log {
+  display: grid;
+  max-height: 360px;
+  gap: 10px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.buddy-message {
+  width: fit-content;
+  max-width: 88%;
+  border-radius: 8px;
+  background: var(--surface-strong);
+  padding: 9px 11px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.buddy-message.user {
+  justify-self: end;
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.buddy-message.crisis {
+  border: 1px solid rgba(169, 71, 53, 0.25);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  font-weight: 750;
+}
+
+.buddy-input {
+  display: grid;
+  gap: 10px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
 .score-row {
   display: grid;
   grid-template-columns: auto minmax(90px, 1fr);
@@ -538,8 +656,37 @@ textarea:focus {
   backdrop-filter: blur(14px);
 }
 
+.settings-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
+
+.settings-icon-button span {
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.settings-icon-button.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
 body.dark-mode .bottom-nav {
   background: rgba(17, 24, 39, 0.9);
+}
+
+body.dark-mode .app-topbar::after {
+  background: linear-gradient(to bottom, var(--bg), rgba(17, 24, 39, 0));
 }
 
 .bottom-nav button {
@@ -571,7 +718,13 @@ body.dark-mode .bottom-nav {
 
 @media (max-width: 360px) {
   .app-shell {
-    padding-inline: 0.75rem;
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+  }
+
+  .app-topbar {
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
   }
 
   .card {

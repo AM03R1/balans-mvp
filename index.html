@@ -7,29 +7,30 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Balans" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Balans MVP</title>
+    <title>Feelbetter</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="public/app-icon.svg" />
     <link rel="apple-touch-icon" href="public/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=scroll-away-topbar-20260517-1152" />
   </head>
   <body>
     <main class="app-shell">
-      <section class="screen active" id="screen-today" aria-labelledby="today-title">
-        <header class="page-header">
-          <p class="eyebrow">Balans</p>
-          <h1 id="today-title">Waarom voel ik me vandaag zo?</h1>
-          <p class="date-label" id="today-date"></p>
-        </header>
+      <header class="app-topbar" data-build="scroll-away-topbar-20260517-1152" aria-live="polite">
+        <div class="app-topbar-copy">
+          <p class="eyebrow" id="topbar-eyebrow">Feelbetter</p>
+          <h1 id="topbar-title">Hoe voel ik mij vandaag?</h1>
+          <p class="date-label" id="topbar-date"></p>
+        </div>
+        <button class="settings-icon-button" type="button" data-screen="settings" aria-label="Instellingen">
+          <span aria-hidden="true">⚙</span>
+        </button>
+      </header>
+
+      <section class="screen active" id="screen-today">
         <div id="today-content"></div>
       </section>
 
-      <section class="screen" id="screen-checkin" aria-labelledby="checkin-title">
-        <header class="page-header">
-          <p class="eyebrow">Check-in</p>
-          <h1 id="checkin-title">Hoe is je basis vandaag?</h1>
-        </header>
-
+      <section class="screen" id="screen-checkin">
         <form class="stack" id="checkin-form">
           <div class="card form-card">
             <label class="field">
@@ -78,29 +79,19 @@
         </form>
       </section>
 
-      <section class="screen" id="screen-result" aria-labelledby="result-title">
-        <header class="page-header">
-          <p class="eyebrow">Resultaat</p>
-          <h1 id="result-title">Je analyse</h1>
-          <p class="date-label" id="result-date"></p>
-        </header>
+      <section class="screen" id="screen-result">
         <div class="stack" id="result-content"></div>
       </section>
 
-      <section class="screen" id="screen-week" aria-labelledby="week-title">
-        <header class="page-header">
-          <p class="eyebrow">Progressie</p>
-          <h1 id="week-title">Discipline door zichtbare progressie</h1>
-        </header>
+      <section class="screen" id="screen-week">
         <div id="week-content"></div>
       </section>
 
-      <section class="screen" id="screen-settings" aria-labelledby="settings-title">
-        <header class="page-header">
-          <p class="eyebrow">Instellingen</p>
-          <h1 id="settings-title">Maak Balans van jou</h1>
-        </header>
+      <section class="screen" id="screen-buddy">
+        <div class="stack" id="buddy-content"></div>
+      </section>
 
+      <section class="screen" id="screen-settings">
         <div class="stack">
           <div class="card settings-card">
             <div>
@@ -124,7 +115,7 @@
       <button type="button" data-screen="today" class="active"><span>H</span>Vandaag</button>
       <button type="button" data-screen="checkin"><span>+</span>Check-in</button>
       <button type="button" data-screen="week"><span>%</span>Progressie</button>
-      <button type="button" data-screen="settings"><span>*</span>Instellingen</button>
+      <button type="button" data-screen="buddy"><span>B</span>Buddy</button>
     </nav>
 
     <script src="app.js"></script>

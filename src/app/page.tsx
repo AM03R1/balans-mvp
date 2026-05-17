@@ -5,7 +5,7 @@ import { BalanceCard } from "@/components/BalanceCard";
 import { ButtonLink } from "@/components/ButtonLink";
 import { InsightMessage } from "@/components/InsightMessage";
 import { calculateBalanceScore } from "@/lib/analysis";
-import { formatDateLabel, todayKey } from "@/lib/date";
+import { todayKey } from "@/lib/date";
 import { getCheckInByDate } from "@/lib/storage";
 import type { CheckIn } from "@/lib/types";
 
@@ -19,12 +19,6 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-1 flex-col gap-5">
-      <header className="pt-3">
-        <p className="text-sm font-extrabold uppercase text-leaf">Balans</p>
-        <h1 className="mt-3 text-4xl font-black leading-tight">Waarom voel ik me vandaag zo?</h1>
-        <p className="mt-3 text-base capitalize text-ink/60">{formatDateLabel(date)}</p>
-      </header>
-
       {todayCheckIn ? (
         <>
           <BalanceCard>

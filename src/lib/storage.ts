@@ -21,25 +21,95 @@ export function getCheckIns(): CheckIn[] {
 
   try {
     const parsed = JSON.parse(rawValue);
-    return Array.isArray(parsed) ? parsed.map(normalizeCheckIn) : [];
+    return Array.isArray(parsed) ? parsed.map(normalizeCheckIn).filter((checkIn): checkIn is CheckIn => Boolean(checkIn)) : [];
   } catch {
     return [];
   }
 }
 
-function normalizeCheckIn(checkIn: CheckIn): CheckIn {
+function normalizeCheckIn(value: unknown): CheckIn | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const checkIn = value as Record<string, unknown>;
+  const date = typeof checkIn.date === "string" && checkIn.date ? checkIn.date : "";
+
+  if (!date) {
+    return null;
+  }
+
+  const sleepHours = normalizeNumber(checkIn.sleepHours, 0, 14, 0);
+  const stress = normalizeScore(checkIn.stress, getStressFromLegacyFocus(checkIn.focus));
+  const energy = normalizeScore(checkIn.energy, getEnergyFromLegacyMood(checkIn.mood));
+  const createdAt = typeof checkIn.createdAt === "string" ? checkIn.createdAt : `${date}T00:00:00.000Z`;
+  const updatedAt = typeof checkIn.updatedAt === "string" ? checkIn.updatedAt : createdAt;
+
   return {
     ...checkIn,
+    date,
+    sleepHours,
+    stress,
+    energy,
     nutrition: normalizeNutrition(checkIn.nutrition),
+    note: typeof checkIn.note === "string" ? checkIn.note : "",
+    createdAt,
+    updatedAt,
   };
 }
 
-function normalizeNutrition(value: string): Nutrition {
+function normalizeNutrition(value: unknown): Nutrition {
   if (value === "goed" || value === "slecht") {
     return value;
   }
 
   return "oke";
+}
+
+function normalizeScore(value: unknown, fallback: number) {
+  return Math.round(normalizeNumber(value, 1, 10, fallback));
+}
+
+function normalizeNumber(value: unknown, min: number, max: number, fallback: number) {
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue)) {
+    return fallback;
+  }
+
+  return Math.max(min, Math.min(max, numberValue));
+}
+
+function getStressFromLegacyFocus(value: unknown) {
+  if (value === "slecht") {
+    return 8;
+  }
+
+  if (value === "moeilijk") {
+    return 7;
+  }
+
+  if (value === "scherp") {
+    return 3;
+  }
+
+  return 5;
+}
+
+function getEnergyFromLegacyMood(value: unknown) {
+  if (value === "slecht") {
+    return 3;
+  }
+
+  if (value === "goed") {
+    return 8;
+  }
+
+  if (value === "heel-goed") {
+    return 9;
+  }
+
+  return 5;
 }
 
 export function getCheckInByDate(date: string) {

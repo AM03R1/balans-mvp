@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
+import { AppTopbar } from "@/components/AppTopbar";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
@@ -35,7 +36,8 @@ export default function RootLayout({
     <html lang="nl">
       <body>
         <ServiceWorkerRegister />
-        <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-28 pt-4 safe-top">
+        <main className="app-scroll-shell mx-auto flex w-full max-w-md flex-col px-4 pb-28">
+          <AppTopbar />
           {children}
         </main>
         <BottomNavigation />

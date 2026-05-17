@@ -1,5 +1,13 @@
 const STORAGE_KEY = "balans-mvp-checkins";
 const THEME_STORAGE_KEY = "balans-mvp-theme";
+const BUDDY_CRISIS_REPLY =
+  "Het spijt me dat je je zo voelt. Je hoeft dit niet alleen te dragen. Neem nu direct contact op met iemand die je vertrouwt of bel 112 als je in direct gevaar bent. In Nederland kun je ook 113 Zelfmoordpreventie bereiken via 113 of 0800-0113.";
+const BUDDY_SCOPE_REPLY =
+  "Daar kan ik je niet goed mee helpen. Balans Buddy is er alleen om kort mee te denken over hoe je je voelt, je gezondheid, je check-in, slaap, focus, stemming, voeding of een kleine praktische stap.\n\nWil je vertellen wat dit met je doet, of hoe je je nu voelt?";
+const BUDDY_UNCLEAR_REPLY =
+  "Ik begrijp niet helemaal wat je bedoelt. Wil je het opnieuw in gewone woorden zeggen?";
+const BUDDY_SAFETY_MESSAGE =
+  "Balans Buddy is bedoeld om je te helpen reflecteren, maar is geen vervanging voor professionele hulp. Als je jezelf of iemand anders iets wilt aandoen, neem direct contact op met 112 of iemand die je vertrouwt.";
 const nutritionButtons = [...document.querySelectorAll("[data-nutrition]")];
 const focusButtons = [...document.querySelectorAll("[data-focus]")];
 const moodButtons = [...document.querySelectorAll("[data-mood]")];
@@ -7,19 +15,38 @@ const darkModeToggle = document.querySelector("#dark-mode-toggle");
 let selectedNutrition = "oke";
 let selectedFocus = "prima";
 let selectedMood = "neutraal";
+let buddyChatOpen = false;
+let buddyMessages = [];
 
 const screens = {
   today: document.querySelector("#screen-today"),
   checkin: document.querySelector("#screen-checkin"),
   result: document.querySelector("#screen-result"),
   week: document.querySelector("#screen-week"),
+  buddy: document.querySelector("#screen-buddy"),
   settings: document.querySelector("#screen-settings"),
 };
 
 const today = todayKey();
+const topbar = {
+  shell: document.querySelector(".app-topbar"),
+  eyebrow: document.querySelector("#topbar-eyebrow"),
+  title: document.querySelector("#topbar-title"),
+  date: document.querySelector("#topbar-date"),
+};
+const appShell = document.querySelector(".app-shell");
+const screenHeadings = {
+  today: { eyebrow: "Feelbetter", title: "Hoe voel ik mij vandaag?", date: formatDate(today) },
+  checkin: { eyebrow: "Check-in", title: "Hoe is je basis vandaag?", date: "" },
+  result: { eyebrow: "Resultaat", title: "Je analyse", date: formatDate(today) },
+  week: { eyebrow: "Progressie", title: "Discipline door zichtbare progressie", date: "" },
+  buddy: { eyebrow: "Balans Buddy", title: "Praat erover", date: formatDate(today) },
+  settings: { eyebrow: "Instellingen", title: "Maak Balans van jou", date: "" },
+};
 
-document.querySelector("#today-date").textContent = formatDate(today);
-document.querySelector("#result-date").textContent = formatDate(today);
+setText("#today-date", formatDate(today));
+setText("#result-date", formatDate(today));
+setText("#buddy-date", formatDate(today));
 
 document.querySelectorAll("[data-screen]").forEach((button) => {
   button.addEventListener("click", () => showScreen(button.dataset.screen));
@@ -73,6 +100,7 @@ document.querySelector("#checkin-form").addEventListener("submit", (event) => {
     updatedAt: new Date().toISOString(),
   });
 
+  resetBuddyChat();
   renderAll();
   showScreen("result");
 });
@@ -84,8 +112,14 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") {
 loadTodayIntoForm();
 setTheme(readThemePreference());
 renderAll();
+updateTopbar("today");
 
 function showScreen(name) {
+  if (name === "buddy" && getCheckInByDate(today)) {
+    buddyChatOpen = true;
+    renderBuddy();
+  }
+
   Object.entries(screens).forEach(([key, screen]) => {
     screen.classList.toggle("active", key === name);
   });
@@ -94,13 +128,32 @@ function showScreen(name) {
     button.classList.toggle("active", button.dataset.screen === name);
   });
 
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  updateTopbar(name);
+  appShell?.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function renderAll() {
   renderToday();
   renderResult();
   renderWeek();
+  renderBuddy();
+}
+
+function setText(selector, value) {
+  const element = document.querySelector(selector);
+  if (element) element.textContent = value;
+}
+
+function updateTopbar(name) {
+  const heading = screenHeadings[name] || screenHeadings.today;
+
+  if (topbar.eyebrow) topbar.eyebrow.textContent = heading.eyebrow;
+  if (topbar.title) topbar.title.textContent = heading.title;
+
+  if (topbar.date) {
+    topbar.date.textContent = heading.date;
+    topbar.date.hidden = !heading.date;
+  }
 }
 
 function readThemePreference() {
@@ -184,6 +237,7 @@ function renderResult() {
     ${insightCard(checkIn)}
     ${coachMomentCard(getDailyCoachMoment(checkIn, checkIns))}
     ${checkIn.note ? `<div class="card"><strong>Je notitie</strong><p>${escapeHtml(checkIn.note)}</p></div>` : ""}
+    ${buddyChatCard(checkIn)}
     <button class="primary-button" type="button" onclick="showScreen('week')">Bekijk progressie</button>
     <button class="secondary-button" type="button" onclick="showScreen('checkin')">Aanpassen</button>
   `;
@@ -233,6 +287,24 @@ function renderWeek() {
       </div>
     </div>
   `;
+}
+
+function renderBuddy() {
+  const checkIn = getCheckInByDate(today);
+  const target = document.querySelector("#buddy-content");
+
+  if (!checkIn) {
+    target.innerHTML = `
+      <div class="card empty-state">
+        <h2>Eerst even inchecken</h2>
+        <p>De buddy gebruikt je check-in van vandaag als context. Vul die eerst kort in.</p>
+        <button class="primary-button" type="button" onclick="showScreen('checkin')">Check-in invullen</button>
+      </div>
+    `;
+    return;
+  }
+
+  target.innerHTML = buddyChatCard(checkIn);
 }
 
 function insightCard(checkIn) {
@@ -286,6 +358,331 @@ function coachMomentCard(moment) {
       </div>
     </div>
   `;
+}
+
+function buddyChatCard(checkIn) {
+  ensureBuddyMessages(checkIn);
+
+  if (!buddyChatOpen) {
+    return `
+      <div class="card buddy-card">
+        <div>
+          <p class="analysis-label">Balans Buddy</p>
+          <h2 class="analysis-title">Even napraten over je check-in?</h2>
+          <p class="analysis-text">Een korte plek om je gedachten te ordenen. Geen diagnose, geen therapie, alleen rustig reflecteren.</p>
+        </div>
+        <button class="primary-button" type="button" onclick="openBuddyChat()">Praat erover</button>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="card buddy-card">
+      <div class="buddy-header">
+        <div>
+          <p class="analysis-label">Balans Buddy</p>
+          <h2 class="analysis-title">Praat erover</h2>
+        </div>
+        <button class="secondary-button buddy-close" type="button" onclick="closeBuddyChat()">Sluiten</button>
+      </div>
+      <p class="buddy-disclaimer">${BUDDY_SAFETY_MESSAGE}</p>
+      <div class="buddy-log" role="log" aria-live="polite">
+        ${buddyMessages
+          .map((message) => {
+            const crisisClass = message.role === "buddy" && message.text === BUDDY_CRISIS_REPLY ? " crisis" : "";
+            return `<div class="buddy-message ${message.role}${crisisClass}">${escapeHtml(message.text)}</div>`;
+          })
+          .join("")}
+      </div>
+      <form class="buddy-input" onsubmit="sendBuddyMessage(event)">
+        <label class="field">
+          <span class="visually-hidden">Bericht aan Balans Buddy</span>
+          <textarea data-buddy-message rows="3" maxlength="420" placeholder="Typ kort hoe je je voelt..." onkeydown="handleBuddyMessageKeyDown(event)"></textarea>
+        </label>
+        <button class="primary-button" type="submit">Verstuur</button>
+      </form>
+    </div>
+  `;
+}
+
+function openBuddyChat() {
+  const checkIn = getCheckInByDate(today);
+
+  if (!checkIn) return;
+
+  buddyChatOpen = true;
+  ensureBuddyMessages(checkIn);
+  renderResult();
+  renderBuddy();
+  setTimeout(focusBuddyInput, 0);
+}
+
+function closeBuddyChat() {
+  resetBuddyChat();
+  renderResult();
+  renderBuddy();
+}
+
+function sendBuddyMessage(event) {
+  event.preventDefault();
+
+  const input = getBuddyInput(event);
+  const text = input?.value.trim();
+  const checkIn = getCheckInByDate(today);
+
+  if (!text || !checkIn) return;
+
+  ensureBuddyMessages(checkIn);
+  buddyMessages = [
+    ...buddyMessages,
+    { role: "user", text },
+    { role: "buddy", text: generateBuddyReply(text, checkIn) },
+  ];
+  renderResult();
+  renderBuddy();
+  setTimeout(focusBuddyInput, 0);
+}
+
+function handleBuddyMessageKeyDown(event) {
+  if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+
+  event.preventDefault();
+  sendBuddyMessage(event);
+}
+
+function resetBuddyChat() {
+  buddyChatOpen = false;
+  buddyMessages = [];
+}
+
+function getBuddyInput(event) {
+  const source = event?.currentTarget;
+  const form = source?.closest?.("form") || document.querySelector(".screen.active .buddy-input");
+  return form?.querySelector("[data-buddy-message]") || null;
+}
+
+function ensureBuddyMessages(checkIn) {
+  if (buddyMessages.length) return;
+
+  buddyMessages = [{ role: "buddy", text: generateBuddyOpening(checkIn) }];
+}
+
+function focusBuddyInput() {
+  const log = document.querySelector(".screen.active .buddy-log");
+  log?.scrollTo({ top: log.scrollHeight });
+  document.querySelector(".screen.active [data-buddy-message]")?.focus();
+}
+
+function generateBuddyOpening(checkIn) {
+  if (checkIn.mood === "slecht") {
+    return "Je stemming lijkt vandaag wat lager. Wil je vertellen wat er door je hoofd gaat?";
+  }
+
+  if (checkIn.focus === "slecht" || checkIn.focus === "moeilijk") {
+    return "Het klinkt alsof concentreren vandaag lastig is. Wat maakt het moeilijk om te beginnen?";
+  }
+
+  if (checkIn.sleepHours > 0 && checkIn.sleepHours < 6) {
+    return "Met weinig slaap kan alles zwaarder voelen. Misschien hoeft vandaag niet perfect te zijn.";
+  }
+
+  if (checkIn.nutrition === "slecht") {
+    return "Je voeding gaf vandaag weinig steun. Wil je vertellen hoe je dag tot nu toe loopt?";
+  }
+
+  return "Je check-in is binnen. Wil je kort vertellen wat er op dit moment door je hoofd gaat?";
+}
+
+function generateBuddyReply(message, todayEntry) {
+  if (detectCrisisMessage(message)) {
+    return BUDDY_CRISIS_REPLY;
+  }
+
+  const text = normalizeBuddyText(message);
+
+  if (detectUnclearMessage(message)) {
+    return BUDDY_UNCLEAR_REPLY;
+  }
+
+  if (detectOutOfScopeMessage(message)) {
+    return BUDDY_SCOPE_REPLY;
+  }
+
+  if (text.length < 3) {
+    return `${generateBuddyOpening(todayEntry)}\n\nKleine stap: schrijf een paar woorden op zonder ze meteen te hoeven oplossen.`;
+  }
+
+  if (mentionsFocus(text)) {
+    return "Het klinkt alsof concentreren vandaag lastig is. Wat maakt beginnen nu het moeilijkst?\n\nKleine stap: zet een timer op 10 minuten en kies alleen de eerste handeling.";
+  }
+
+  if (mentionsPressure(text)) {
+    return "Dat klinkt alsof je hoofd vol zit. Wat legt vandaag de meeste druk op je?\n\nKleine stap: kies een ding dat echt moet en laat een ander ding bewust wachten.";
+  }
+
+  if (mentionsSelfCriticism(text)) {
+    return "Je klinkt streng voor jezelf. Wat zou je tegen een vriend zeggen die dit zo vertelde?\n\nKleine stap: haal een eis van vandaag af en houd een haalbare volgende stap over.";
+  }
+
+  if (mentionsLowMood(text)) {
+    return "Dat klinkt zwaar, en het is logisch dat je dan minder ruimte voelt. Wat zou vandaag een klein beetje zachter maken?\n\nKleine stap: doe iets eenvoudigs dat geen prestatie hoeft te zijn.";
+  }
+
+  if (mentionsSleep(text)) {
+    return "Met weinig slaap kan alles sneller zwaar voelen. Wat mag vandaag iets minder perfect?\n\nKleine stap: kies een taak die klein genoeg is om moe te kunnen doen.";
+  }
+
+  if (mentionsFood(text)) {
+    return "Als eten vandaag minder lukte, kan je energie ook wiebeliger voelen. Wat zou nu haalbaar zijn?\n\nKleine stap: kies iets simpels met water erbij, zonder er een perfecte maaltijd van te maken.";
+  }
+
+  if (todayEntry.focus === "slecht" || todayEntry.focus === "moeilijk") {
+    return "Het klinkt alsof concentreren vandaag lastig is. Wat maakt beginnen nu het moeilijkst?\n\nKleine stap: zet een timer op 10 minuten en kies alleen de eerste handeling.";
+  }
+
+  if (todayEntry.sleepHours > 0 && todayEntry.sleepHours < 6) {
+    return "Met weinig slaap kan alles sneller zwaar voelen. Wat mag vandaag iets minder perfect?\n\nKleine stap: kies een taak die klein genoeg is om moe te kunnen doen.";
+  }
+
+  if (todayEntry.mood === "slecht") {
+    return "Dat klinkt zwaar, en het is logisch dat je dan minder ruimte voelt. Wat zou vandaag een klein beetje zachter maken?\n\nKleine stap: doe iets eenvoudigs dat geen prestatie hoeft te zijn.";
+  }
+
+  if (todayEntry.nutrition === "slecht") {
+    return "Als eten vandaag minder lukte, kan je energie ook wiebeliger voelen. Wat zou nu haalbaar zijn?\n\nKleine stap: kies iets simpels met water erbij, zonder er een perfecte maaltijd van te maken.";
+  }
+
+  if (todayEntry.note) {
+    return "Je notitie laat zien dat er iets speelt. Wat voelt op dit moment het meest aanwezig?\n\nKleine stap: benoem een ding dat je kunt doen en een ding dat even mag wachten.";
+  }
+
+  return "Dank je dat je dit opschrijft. Wat wil je vooral beter begrijpen aan dit gevoel?\n\nKleine stap: kies een rustige volgende handeling voor de komende 10 minuten.";
+}
+
+function detectCrisisMessage(message) {
+  const text = normalizeBuddyText(message);
+  const crisisPatterns = [
+    /\bzelfmoord\b/,
+    /\bsuicide\b/,
+    /\bsuicidaal\b/,
+    /\bsuicidale\b/,
+    /\bik wil dood\b/,
+    /\bik wil niet meer leven\b/,
+    /\bniet meer willen leven\b/,
+    /\bniet meer leven\b/,
+    /\bmezelf dood\b/,
+    /\bmijzelf dood\b/,
+    /\beinde aan mijn leven\b/,
+    /\ber een einde aan maken\b/,
+    /\bmezelf iets aandoen\b/,
+    /\bmijzelf iets aandoen\b/,
+    /\bmezelf pijn doen\b/,
+    /\bmijzelf pijn doen\b/,
+    /\bzelfbeschadiging\b/,
+    /\bautomutilatie\b/,
+    /\bik snij mezelf\b/,
+    /\biemand iets aandoen\b/,
+    /\biemand pijn doen\b/,
+    /\biemand vermoorden\b/,
+    /\bvermoorden\b/,
+    /\bdoodmaken\b/,
+    /\bin direct gevaar\b/,
+    /\bcrisis\b/,
+  ];
+
+  return crisisPatterns.some((pattern) => pattern.test(text));
+}
+
+function detectOutOfScopeMessage(message) {
+  const text = normalizeBuddyText(message);
+
+  if (isShortContinuation(text)) return false;
+
+  return (mentionsOffTopicRequest(text) || looksLikeGeneralQuestion(text)) && !mentionsBuddyScope(text);
+}
+
+function detectUnclearMessage(message) {
+  const text = normalizeBuddyText(message);
+
+  if (!text || isShortContinuation(text)) return false;
+
+  const words = text.match(/[a-z]+/g) || [];
+
+  if (words.length === 0) return true;
+
+  const checkableWords = words.filter((word) => word.length >= 4);
+
+  if (checkableWords.length === 0) return false;
+
+  const unclearWords = checkableWords.filter(isUnclearWord);
+  return unclearWords.length > 0 && unclearWords.length / checkableWords.length >= 0.5;
+}
+
+function normalizeBuddyText(message) {
+  return String(message || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function mentionsFocus(text) {
+  return /focus|concentr|beginnen|uitstel|afgeleid|vastlopen|starten/.test(text);
+}
+
+function mentionsSleep(text) {
+  return /moe|slaap|geslapen|uitgeput|kapot|wakker|nacht/.test(text);
+}
+
+function mentionsPressure(text) {
+  return /stress|druk|drukte|overweldig|hoofd vol|te veel|paniek|spanning/.test(text);
+}
+
+function mentionsLowMood(text) {
+  return /somber|verdriet|leeg|huil|down|waardeloos|alleen|eenzaam|rot|slecht/.test(text);
+}
+
+function mentionsFood(text) {
+  return /eten|voeding|maaltijd|honger|snack|ontbijt|lunch|avondeten/.test(text);
+}
+
+function mentionsSelfCriticism(text) {
+  return /faal|falen|dom|lui|schuld|schaam|niet goed genoeg|stom/.test(text);
+}
+
+function isShortContinuation(text) {
+  return /^(ja|nee|ok|oke|geen idee|weet ik niet|misschien|klopt|denk het|ja misschien|niet echt|h+m+|pff+|oei)$/.test(text);
+}
+
+function mentionsBuddyScope(text) {
+  return (
+    mentionsFocus(text) ||
+    mentionsSleep(text) ||
+    mentionsPressure(text) ||
+    mentionsLowMood(text) ||
+    mentionsFood(text) ||
+    mentionsSelfCriticism(text) ||
+    /voel|gevoel|gezond|gezondheid|lichaam|hoofd|energie|stemming|check-in|balans|rust|adem|beweeg|sport|pijn|ziek|moeilijk|zwaar|advies|stap|helpen|hulp|aan de hand|mis met mij|mis met me/.test(text)
+  );
+}
+
+function mentionsOffTopicRequest(text) {
+  return /taart|cake|recept|bakken|koken|weer|temperatuur|regen|zon|nieuws|voetbal|film|serie|muziek|programmeer|code|javascript|python|huiswerk|vertalen|samenvatten|rekensom|grap|verhaal|restaurant|hotel|vlucht|reis|auto|belasting|crypto|aandeel|sollicitatiebrief|email/.test(text);
+}
+
+function looksLikeGeneralQuestion(text) {
+  return /^(wat is|wie is|waar is|wanneer|hoe maak|hoe werkt|kun je|kan je|geef|vertel me|schrijf|maak|bereken|vertaal|zoek)\b/.test(text);
+}
+
+function isUnclearWord(word) {
+  if (/^[a-z]*[aeiouy][a-z]*$/.test(word) && !mentionsKeyboardMash(word)) return false;
+
+  return !/[aeiouy]/.test(word) || /[bcdfghjklmnpqrstvwxyz]{5,}/.test(word) || mentionsKeyboardMash(word);
+}
+
+function mentionsKeyboardMash(text) {
+  return /(asdf|qwer|zxcv|sdf|dfg|fgh|ghj|hjk|jkl|asd|fgj|gfg|dgd|gdg)/.test(text);
 }
 
 function getDailyCoachMoment(entry, entries) {
@@ -743,13 +1140,22 @@ function normalizeNutrition(value) {
 function normalizeCheckIn(entry) {
   if (!entry || typeof entry !== "object") return null;
 
+  const date = typeof entry.date === "string" && entry.date ? entry.date : "";
   const sleepHours = Number(entry.sleepHours);
+  const createdAt = typeof entry.createdAt === "string" ? entry.createdAt : `${date}T00:00:00.000Z`;
+
+  if (!date) return null;
+
   return {
     ...entry,
-    sleepHours: Number.isFinite(sleepHours) ? sleepHours : 0,
+    date,
+    sleepHours: Number.isFinite(sleepHours) ? Math.max(0, Math.min(14, sleepHours)) : 0,
     focus: normalizeFocus(entry.focus, entry.stress),
     mood: normalizeMood(entry.mood, entry.energy),
     nutrition: normalizeNutrition(entry.nutrition),
+    note: typeof entry.note === "string" ? entry.note : "",
+    createdAt,
+    updatedAt: typeof entry.updatedAt === "string" ? entry.updatedAt : createdAt,
   };
 }
 

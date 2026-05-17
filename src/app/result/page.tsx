@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { BalanceCard } from "@/components/BalanceCard";
+import { BuddyChat } from "@/components/BuddyChat";
 import { ButtonLink } from "@/components/ButtonLink";
 import { InsightMessage } from "@/components/InsightMessage";
-import { formatDateLabel, todayKey } from "@/lib/date";
+import { todayKey } from "@/lib/date";
 import { getCheckInByDate } from "@/lib/storage";
 import type { CheckIn } from "@/lib/types";
 
@@ -18,12 +19,6 @@ export default function ResultPage() {
 
   return (
     <div className="space-y-5">
-      <header className="pt-3">
-        <p className="text-sm font-extrabold uppercase text-leaf">Resultaat</p>
-        <h1 className="mt-3 text-4xl font-black leading-tight">Je analyse</h1>
-        <p className="mt-3 text-base capitalize text-ink/60">{formatDateLabel(date)}</p>
-      </header>
-
       {checkIn ? (
         <>
           <InsightMessage checkIn={checkIn} />
@@ -33,6 +28,7 @@ export default function ResultPage() {
               <p className="mt-2 text-base leading-7 text-ink/75">{checkIn.note}</p>
             </BalanceCard>
           ) : null}
+          <BuddyChat todayEntry={checkIn} />
           <div className="grid gap-3">
             <ButtonLink href="/week">Bekijk weekoverzicht</ButtonLink>
             <ButtonLink href="/check-in" variant="secondary">Aanpassen</ButtonLink>
