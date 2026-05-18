@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Balans MVP",
-    short_name: "Balans",
-    description: "Dagelijkse check-ins die uitleggen waarom je je vandaag zo voelt.",
+    name: "Feelbetter",
+    short_name: "Feelbetter",
+    description: "Dagelijkse check-ins en rustige reflectie met Balans Buddy.",
     start_url: "/",
     scope: "/",
     display: "standalone",
@@ -12,6 +12,12 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#ffffff",
     orientation: "portrait",
     icons: [
+      {
+        src: "/app-icon.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any maskable",
+      },
       {
         src: "/app-icon.svg",
         sizes: "512x512",

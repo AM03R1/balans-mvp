@@ -1,5 +1,5 @@
 import { getLastSevenDateKeys } from "./date";
-import type { BalanceScore, CheckIn, DisciplineScore, ScoreFactor, WeekComparison, WeeklyStats } from "./types";
+import type { BalanceScore, CheckIn, DisciplineScore, ScoreFactor, WeekComparison, WeeklyAnalysis, WeeklyStats } from "./types";
 
 export function createInsight(checkIn: CheckIn) {
   const balance = calculateBalanceScore(checkIn);
@@ -13,6 +13,69 @@ export function createInsight(checkIn: CheckIn) {
     balance,
   };
 }
+
+export function getStartDayInsight(checkIn: CheckIn | null, dateKey: string) {
+  if (checkIn?.sleepHours && checkIn.sleepHours < 6) {
+    return {
+      lesson: "Na weinig slaap werkt een kleinere planning beter dan harder pushen.",
+      action: "Kies maximaal één belangrijk ding en maak de rest lichter.",
+    };
+  }
+
+  if (checkIn && checkIn.stress > 6) {
+    return {
+      lesson: "Stress zakt vaak pas als je bepaalt wat nu geen aandacht krijgt.",
+      action: "Kies één taak die vandaag mag wachten.",
+    };
+  }
+
+  if (checkIn && checkIn.energy <= 4) {
+    return {
+      lesson: "Weinig energie is informatie; je planning mag daarop aanpassen.",
+      action: "Maak je volgende stap klein genoeg om zonder druk te doen.",
+    };
+  }
+
+  if (checkIn?.nutrition === "slecht") {
+    return {
+      lesson: "Energie blijft stabieler als eten simpel en regelmatig genoeg is.",
+      action: "Kies één normale maaltijd of snack die weinig moeite kost.",
+    };
+  }
+
+  return START_DAY_INSIGHTS[getStableDayIndex(dateKey, START_DAY_INSIGHTS.length)];
+}
+
+const START_DAY_INSIGHTS = [
+  {
+    lesson: "Een goede dag begint vaak met een duidelijke eerste stap.",
+    action: "Kies één taak en bepaal alleen de eerste handeling.",
+  },
+  {
+    lesson: "Discipline is terugkomen, niet alles perfect doen.",
+    action: "Doe vandaag één kleine actie die je morgen makkelijk kunt herhalen.",
+  },
+  {
+    lesson: "Rust ontstaat sneller als je minder tegelijk probeert te dragen.",
+    action: "Zet één open taak op papier en parkeer de rest bewust.",
+  },
+  {
+    lesson: "Je energie is niet elke dag hetzelfde; je planning mag meebewegen.",
+    action: "Maak je planning vandaag passend bij je echte energieniveau.",
+  },
+  {
+    lesson: "Starten wordt makkelijker als de eerste stap klein genoeg is.",
+    action: "Maak je eerste taak kleiner dan je normaal zou kiezen.",
+  },
+  {
+    lesson: "Overzicht begint met kiezen wat nu geen aandacht krijgt.",
+    action: "Kies één ding dat vandaag niet hoeft.",
+  },
+  {
+    lesson: "Een normale dag hoeft niet bijzonder te zijn om nuttig te zijn.",
+    action: "Houd één basisritme vast: slaap, eten, bewegen of focus.",
+  },
+];
 
 export function calculateBalanceScore(checkIn: CheckIn): BalanceScore {
   const sleep = calculateSleepScore(checkIn.sleepHours);
@@ -99,6 +162,7 @@ export function compareWithPreviousWeek(checkIns: CheckIn[], referenceDate = new
   const disciplineDelta = calculateDisciplineScoreBase(currentEntries) - calculateDisciplineScoreBase(previousEntries);
 
   return {
+    hasPreviousWeek,
     balanceDelta,
     disciplineDelta,
     sleepDeltaMinutes,
@@ -157,6 +221,110 @@ export function createWeeklyConclusion(stats: WeeklyStats) {
   return "Kleine verbetering is ook progressie.";
 }
 
+export function createWeeklyAnalysis(checkIns: CheckIn[], referenceDate = new Date()): WeeklyAnalysis {
+  const entries = getEntriesForKeys(checkIns, getLastSevenDateKeys(referenceDate));
+  const daysFilled = entries.length;
+
+  if (daysFilled === 0) {
+    return {
+      good: "Je hebt nog geen check-ins deze week. Er is nog geen patroon om te bekijken.",
+      improve: "Begin met één korte check-in. Daarna kan Balans betere weekinzichten tonen.",
+      focus: "Vul vandaag je eerste check-in in.",
+    };
+  }
+
+  const averages = calculateAverages(entries);
+  const strongBalanceDays = entries.filter((entry) => calculateBalanceScore(entry).score >= 70).length;
+  const enoughSleepDays = entries.filter((entry) => entry.sleepHours >= 7 && entry.sleepHours <= 9).length;
+  const lowerStressDays = entries.filter((entry) => entry.stress <= 5).length;
+  const steadyEnergyDays = entries.filter((entry) => entry.energy >= 6).length;
+  const shortSleepDays = entries.filter((entry) => entry.sleepHours < 6.5).length;
+  const highStressDays = entries.filter((entry) => entry.stress >= 7).length;
+  const lowEnergyDays = entries.filter((entry) => entry.energy <= 4).length;
+  const weakNutritionDays = entries.filter((entry) => entry.nutrition === "slecht").length;
+  const improvement = getWeeklyImprovement(shortSleepDays, highStressDays, lowEnergyDays, weakNutritionDays, daysFilled);
+
+  return {
+    good: getWeeklyGoodInsight(daysFilled, strongBalanceDays, enoughSleepDays, lowerStressDays, steadyEnergyDays, averages),
+    improve: improvement.text,
+    focus: improvement.action,
+  };
+}
+
+function getWeeklyGoodInsight(
+  daysFilled: number,
+  strongBalanceDays: number,
+  enoughSleepDays: number,
+  lowerStressDays: number,
+  steadyEnergyDays: number,
+  averages: { sleep: number; stress: number; energy: number; balance: number },
+) {
+  if (daysFilled >= 5) {
+    return `Je hebt ${daysFilled} van de 7 dagen ingecheckt. Dat geeft genoeg ritme om patronen te zien.`;
+  }
+
+  if (strongBalanceDays >= Math.max(2, Math.ceil(daysFilled / 2))) {
+    return `Op ${strongBalanceDays} ${strongBalanceDays === 1 ? "dag" : "dagen"} was je balans redelijk stevig. Dat is een goed signaal.`;
+  }
+
+  if (enoughSleepDays >= Math.max(2, Math.ceil(daysFilled / 2))) {
+    return `Je slaap zat op ${enoughSleepDays} ${enoughSleepDays === 1 ? "dag" : "dagen"} in een gezonde range. Dat helpt je basis.`;
+  }
+
+  if (lowerStressDays >= Math.max(2, Math.ceil(daysFilled / 2)) || averages.stress <= 5) {
+    return "Je stress bleef op meerdere dagen redelijk beheersbaar. Dat is iets om vast te houden.";
+  }
+
+  if (steadyEnergyDays >= Math.max(2, Math.ceil(daysFilled / 2)) || averages.energy >= 6) {
+    return "Je energie was op meerdere dagen werkbaar. Dat geeft ruimte om rustig op te bouwen.";
+  }
+
+  return `Je hebt ${daysFilled} ${daysFilled === 1 ? "dag" : "dagen"} data verzameld. Dat is de eerste stap naar betere weekinzichten.`;
+}
+
+function getWeeklyImprovement(shortSleepDays: number, highStressDays: number, lowEnergyDays: number, weakNutritionDays: number, daysFilled: number) {
+  const issues = [
+    {
+      count: shortSleepDays,
+      text: `Op ${shortSleepDays} ${shortSleepDays === 1 ? "dag" : "dagen"} was je slaap kort. Dat lijkt je herstel het meest te raken.`,
+      action: "Plan komende week twee avonden waarop je 30 minuten eerder afrondt.",
+    },
+    {
+      count: highStressDays,
+      text: `Op ${highStressDays} ${highStressDays === 1 ? "dag" : "dagen"} was je stress hoog. Minder tegelijk plannen kan dan meer opleveren.`,
+      action: "Kies elke ochtend één hoofdtaak en één taak die mag wachten.",
+    },
+    {
+      count: lowEnergyDays,
+      text: `Op ${lowEnergyDays} ${lowEnergyDays === 1 ? "dag" : "dagen"} was je energie laag. Dat vraagt om mildere planning.`,
+      action: "Plan drie kleine momenten zonder prestatiedruk, bijvoorbeeld wandelen of rustig opruimen.",
+    },
+    {
+      count: weakNutritionDays,
+      text: `Op ${weakNutritionDays} ${weakNutritionDays === 1 ? "dag" : "dagen"} gaf voeding weinig steun. Dat kan je energie onrustiger maken.`,
+      action: "Leg twee simpele basismaaltijden klaar die weinig moeite kosten.",
+    },
+  ].sort((a, b) => b.count - a.count);
+
+  const mainIssue = issues[0];
+
+  if (mainIssue.count >= Math.max(2, Math.ceil(daysFilled / 3))) {
+    return mainIssue;
+  }
+
+  if (daysFilled < 5) {
+    return {
+      text: "Er is nog te weinig weekdata voor een sterk patroon.",
+      action: "Probeer komende week minstens 5 check-ins te halen.",
+    };
+  }
+
+  return {
+    text: "Er springt geen groot zwak punt uit. Je basis lijkt redelijk verdeeld.",
+    action: "Houd je check-in ritme vast en kies één gewoon basisritme om te bewaken.",
+  };
+}
+
 export function calculateStreak(checkIns: CheckIn[], referenceDate = new Date()) {
   const dates = new Set(checkIns.map((checkIn) => checkIn.date));
   let streak = 0;
@@ -200,7 +368,7 @@ function getNutritionScore(nutrition: CheckIn["nutrition"]) {
 
 function createBalanceExplanation(score: number, factor: ScoreFactor) {
   if (score >= 80) {
-    return `Je Balans Score is sterk. ${createFactorText(factor)}`;
+    return "Je Balans Score is sterk.";
   }
 
   if (score >= 60) {
@@ -306,6 +474,11 @@ function getBestImprovement(sleepDeltaMinutes: number, stressDelta: number, ener
   }
 
   return improvements.sort((a, b) => b.value - a.value)[0].text;
+}
+
+function getStableDayIndex(value: string, length: number) {
+  const total = [...value].reduce((sum, character) => sum + character.charCodeAt(0), 0);
+  return total % length;
 }
 
 function clampScore(value: number) {

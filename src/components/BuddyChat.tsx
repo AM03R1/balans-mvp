@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
-import { BUDDY_CRISIS_REPLY, generateBuddyOpening, generateBuddyReply } from "@/lib/buddy";
+import { BUDDY_CRISIS_REPLY, generateBuddyReply } from "@/lib/buddy";
 import type { CheckIn } from "@/lib/types";
 import { BalanceCard } from "./BalanceCard";
 
@@ -23,25 +23,11 @@ const SAFETY_MESSAGE =
 export function BuddyChat({ todayEntry, defaultOpen = false }: BuddyChatProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [draft, setDraft] = useState("");
-  const [messages, setMessages] = useState<BuddyMessage[]>([
-    {
-      id: 1,
-      role: "buddy",
-      text: generateBuddyOpening(todayEntry),
-    },
-  ]);
-
-  function getOpeningMessage(): BuddyMessage {
-    return {
-      id: 1,
-      role: "buddy",
-      text: generateBuddyOpening(todayEntry),
-    };
-  }
+  const [messages, setMessages] = useState<BuddyMessage[]>([]);
 
   function resetChat() {
     setDraft("");
-    setMessages([getOpeningMessage()]);
+    setMessages([]);
   }
 
   function openChat() {
@@ -59,7 +45,7 @@ export function BuddyChat({ todayEntry, defaultOpen = false }: BuddyChatProps) {
       return;
     }
 
-    const reply = generateBuddyReply(text, todayEntry);
+    const reply = generateBuddyReply(text, todayEntry, messages);
     const now = Date.now();
 
     setMessages((current) => [
@@ -121,22 +107,24 @@ export function BuddyChat({ todayEntry, defaultOpen = false }: BuddyChatProps) {
 
       <p className="rounded-lg bg-blush px-4 py-3 text-sm leading-6 text-[#8a3f31]">{SAFETY_MESSAGE}</p>
 
-      <div className="grid max-h-[360px] gap-3 overflow-y-auto rounded-lg border border-[#dde3ea] bg-white p-3" role="log" aria-live="polite">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`max-w-[88%] whitespace-pre-line rounded-lg px-3 py-2 text-sm leading-6 ${
-              message.role === "user"
-                ? "ml-auto bg-leaf text-white"
-                : message.text === BUDDY_CRISIS_REPLY
-                  ? "border border-[#efb4a8] bg-blush text-[#8a3f31]"
-                  : "bg-mist text-ink/75"
-            }`}
-          >
-            {message.text}
-          </div>
-        ))}
-      </div>
+      {messages.length ? (
+        <div className="grid max-h-[360px] gap-3 overflow-y-auto rounded-lg border border-[#dde3ea] bg-white p-3" role="log" aria-live="polite">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`max-w-[88%] whitespace-pre-line rounded-lg px-3 py-2 text-sm leading-6 ${
+                message.role === "user"
+                  ? "ml-auto bg-leaf text-white"
+                  : message.text === BUDDY_CRISIS_REPLY
+                    ? "border border-[#efb4a8] bg-blush text-[#8a3f31]"
+                    : "bg-mist text-ink/75"
+              }`}
+            >
+              {message.text}
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <form onSubmit={handleSubmit} className="grid gap-3">
         <label className="block">

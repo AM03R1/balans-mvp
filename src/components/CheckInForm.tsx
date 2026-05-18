@@ -5,7 +5,7 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { getCheckInByDate, saveCheckIn } from "@/lib/storage";
 import { todayKey } from "@/lib/date";
-import type { Nutrition } from "@/lib/types";
+import type { CheckIn, Nutrition } from "@/lib/types";
 import { BalanceCard } from "./BalanceCard";
 
 const nutritionOptions: Nutrition[] = ["slecht", "oke", "goed"];
@@ -22,6 +22,9 @@ type FormState = {
 export function CheckInForm() {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [existingCheckIn, setExistingCheckIn] = useState<CheckIn | null>(null);
+  const [isEditing, setIsEditing] = useState(true);
   const [form, setForm] = useState<FormState>({
     date: todayKey(),
     sleepHours: "",
@@ -35,6 +38,8 @@ export function CheckInForm() {
     const existing = getCheckInByDate(todayKey());
 
     if (existing) {
+      setExistingCheckIn(existing);
+      setIsEditing(false);
       setForm({
         date: existing.date,
         sleepHours: String(existing.sleepHours),
@@ -43,7 +48,11 @@ export function CheckInForm() {
         nutrition: existing.nutrition,
         note: existing.note,
       });
+    } else {
+      setIsEditing(true);
     }
+
+    setIsLoaded(true);
   }, []);
 
   function updateField<Key extends keyof FormState>(key: Key, value: FormState[Key]) {
@@ -61,7 +70,7 @@ export function CheckInForm() {
       return;
     }
 
-    saveCheckIn({
+    const savedCheckIn = saveCheckIn({
       date: form.date,
       sleepHours,
       stress: form.stress,
@@ -70,7 +79,43 @@ export function CheckInForm() {
       note: form.note.trim(),
     });
 
+    setExistingCheckIn(savedCheckIn);
+    setIsEditing(false);
     router.push("/result");
+  }
+
+  if (!isLoaded) {
+    return null;
+  }
+
+  if (existingCheckIn && !isEditing) {
+    return (
+      <div className="space-y-4">
+        <BalanceCard className="space-y-4">
+          <div>
+            <p className="text-sm font-extrabold uppercase text-leaf">Vandaag ingevuld</p>
+            <h2 className="mt-2 text-2xl font-bold leading-tight">Je check-in van vandaag</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <SummaryMetric label="Slaap" value={`${existingCheckIn.sleepHours}u`} />
+            <SummaryMetric label="Stress" value={`${existingCheckIn.stress}/10`} />
+            <SummaryMetric label="Energie" value={`${existingCheckIn.energy}/10`} />
+            <SummaryMetric label="Voeding" value={getNutritionLabel(existingCheckIn.nutrition)} />
+          </div>
+          <div className="rounded-lg border border-leaf/10 bg-mist p-4">
+            <p className="text-sm font-extrabold text-leaf">Notitie</p>
+            <p className="mt-1 text-sm leading-6 text-ink/70">{existingCheckIn.note || "Geen notitie ingevuld."}</p>
+          </div>
+        </BalanceCard>
+        <button
+          type="button"
+          onClick={() => setIsEditing(true)}
+          className="min-h-[42px] w-full rounded-lg bg-leaf px-5 text-base font-extrabold text-white shadow-soft"
+        >
+          Wijzig
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -145,6 +190,23 @@ export function CheckInForm() {
       </button>
     </form>
   );
+}
+
+function SummaryMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-leaf/10 bg-mist p-4">
+      <p className="text-sm font-semibold text-ink/50">{label}</p>
+      <p className="mt-2 text-xl font-black text-leaf">{value}</p>
+    </div>
+  );
+}
+
+function getNutritionLabel(nutrition: Nutrition) {
+  return {
+    slecht: "Slecht",
+    oke: "Oke",
+    goed: "Goed",
+  }[nutrition];
 }
 
 type ScoreSliderProps = {

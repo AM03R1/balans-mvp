@@ -31,7 +31,7 @@ export default function ResultPage() {
           <BuddyChat todayEntry={checkIn} />
           <div className="grid gap-3">
             <ButtonLink href="/week">Bekijk weekoverzicht</ButtonLink>
-            <ButtonLink href="/check-in" variant="secondary">Aanpassen</ButtonLink>
+            <ButtonLink href="/check-in" variant="secondary">Check-in bekijken</ButtonLink>
           </div>
         </>
       ) : (

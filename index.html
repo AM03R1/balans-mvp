@@ -4,14 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#ffffff" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Balans" />
+    <meta name="apple-mobile-web-app-title" content="Feelbetter" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>Feelbetter</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="icon" href="public/app-icon.svg" />
-    <link rel="apple-touch-icon" href="public/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=scroll-away-topbar-20260517-1152" />
+    <link rel="icon" href="public/app-icon.png" />
+    <link rel="apple-touch-icon" href="public/app-icon.png" />
+    <link rel="stylesheet" href="styles.css?v=pitch-polish-20260518" />
   </head>
   <body>
     <main class="app-shell">
@@ -31,6 +32,7 @@
       </section>
 
       <section class="screen" id="screen-checkin">
+        <div class="stack" id="checkin-summary" hidden></div>
         <form class="stack" id="checkin-form">
           <div class="card form-card">
             <label class="field">
@@ -112,12 +114,12 @@
     </main>
 
     <nav class="bottom-nav" aria-label="Navigatie">
-      <button type="button" data-screen="today" class="active"><span>H</span>Vandaag</button>
-      <button type="button" data-screen="checkin"><span>+</span>Check-in</button>
-      <button type="button" data-screen="week"><span>%</span>Progressie</button>
-      <button type="button" data-screen="buddy"><span>B</span>Buddy</button>
+      <button type="button" data-screen="today" class="active">Vandaag</button>
+      <button type="button" data-screen="checkin">Check-in</button>
+      <button type="button" data-screen="week">Progressie</button>
+      <button type="button" data-screen="buddy">Buddy</button>
     </nav>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=buddy-conversation-replies-20260518"></script>
   </body>
 </html>

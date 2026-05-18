@@ -6,17 +6,20 @@ import { BottomNavigation } from "@/components/BottomNavigation";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
-  title: "Balans MVP",
-  description: "Dagelijkse balans check-ins voor slaap, stress, energie en voeding.",
+  title: "Feelbetter",
+  description: "Dagelijkse check-ins en rustige reflectie met Balans Buddy.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Balans",
+    title: "Feelbetter",
   },
   icons: {
-    icon: "/app-icon.svg",
-    apple: "/app-icon.svg",
+    icon: "/app-icon.png",
+    apple: "/app-icon.png",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
   },
 };
 

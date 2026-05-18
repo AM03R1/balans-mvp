@@ -22,6 +22,12 @@ export type WeeklyStats = {
   daysFilled: number;
 };
 
+export type WeeklyAnalysis = {
+  good: string;
+  improve: string;
+  focus: string;
+};
+
 export type ScoreFactor = "slaap" | "stress" | "energie" | "voeding";
 
 export type BalanceScore = {
@@ -39,6 +45,7 @@ export type DisciplineScore = {
 };
 
 export type WeekComparison = {
+  hasPreviousWeek: boolean;
   balanceDelta: number;
   disciplineDelta: number;
   sleepDeltaMinutes: number;
