@@ -968,7 +968,7 @@ function createFoodFollowUpReply(text) {
 }
 
 function mentionsDuration(text) {
-  return /sinds|vanaf|al |dagen|week|weken|maand|uur|uren|gisteren|vandaag|langer/.test(text);
+  return /\b(sinds|vanaf|al|dagen|week|weken|maand|uur|uren|gisteren|vandaag|langer)\b/.test(text);
 }
 
 function mentionsCause(text) {
