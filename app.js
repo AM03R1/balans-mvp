@@ -1,49 +1,23 @@
 const STORAGE_KEY = "balans-mvp-checkins";
 const THEME_STORAGE_KEY = "balans-mvp-theme";
+const JOURNAL_STORAGE_KEY = "balans-mvp-journal";
+const QUIT_TRACKER_STORAGE_KEY = "balans-mvp-quit-tracker";
 const BUDDY_CRISIS_REPLY =
   "Het spijt me dat je je zo voelt. Je hoeft dit niet alleen te dragen. Neem nu direct contact op met iemand die je vertrouwt of bel 112 als je in direct gevaar bent. In Nederland kun je ook 113 Zelfmoordpreventie bereiken via 113 of 0800-0113.";
 const BUDDY_SCOPE_REPLY =
-  "Daar kan ik je niet goed mee helpen. Balans Buddy is er alleen om kort mee te denken over hoe je je voelt, je gezondheid, je check-in, slaap, focus, stemming, voeding of een kleine praktische stap.\n\nWil je vertellen wat dit met je doet, of hoe je je nu voelt?";
+  "Daar kan ik je niet goed mee helpen. Balans Buddy is er alleen om kort mee te denken over hoe je je voelt, je dagboek, je voortgang, gezondheid, slaap, focus, stemming, voeding of een kleine praktische stap.\n\nWil je vertellen wat dit met je doet, of hoe je je nu voelt?";
 const BUDDY_UNCLEAR_REPLY =
   "Ik begrijp niet helemaal wat je bedoelt. Wil je het opnieuw in gewone woorden zeggen?";
 const BUDDY_GREETING_REPLY =
   "Hey, hoe gaat het vandaag met je?";
 const BUDDY_CAPABILITY_REPLY =
-  "Ik kan kort met je meedenken over hoe je je voelt, je slaap, focus, stemming, voeding of een kleine volgende stap. Waar wil je nu even bij stilstaan?";
+  "Ik kan kort met je meedenken over hoe je je voelt, je dagboek, voortgang, slaap, focus of een kleine volgende stap. Waar wil je nu even bij stilstaan?";
 const BUDDY_THANKS_REPLY =
   "Graag gedaan. Wat wil je nu vooral vasthouden uit dit gesprek?";
 const BUDDY_SAFETY_MESSAGE =
   "Balans Buddy is bedoeld om je te helpen reflecteren, maar is geen vervanging voor professionele hulp. Als je jezelf of iemand anders iets wilt aandoen, neem direct contact op met 112 of iemand die je vertrouwt.";
-const START_DAY_INSIGHTS = [
-  {
-    lesson: "Een goede dag begint vaak met een duidelijke eerste stap.",
-    action: "Kies één taak en bepaal alleen de eerste handeling.",
-  },
-  {
-    lesson: "Discipline is terugkomen, niet alles perfect doen.",
-    action: "Doe vandaag één kleine actie die je morgen makkelijk kunt herhalen.",
-  },
-  {
-    lesson: "Rust ontstaat sneller als je minder tegelijk probeert te dragen.",
-    action: "Zet één open taak op papier en parkeer de rest bewust.",
-  },
-  {
-    lesson: "Je energie is niet elke dag hetzelfde; je planning mag meebewegen.",
-    action: "Maak je planning vandaag passend bij je echte energieniveau.",
-  },
-  {
-    lesson: "Starten wordt makkelijker als de eerste stap klein genoeg is.",
-    action: "Maak je eerste taak kleiner dan je normaal zou kiezen.",
-  },
-  {
-    lesson: "Overzicht begint met kiezen wat nu geen aandacht krijgt.",
-    action: "Kies één ding dat vandaag niet hoeft.",
-  },
-  {
-    lesson: "Een normale dag hoeft niet bijzonder te zijn om nuttig te zijn.",
-    action: "Houd één basisritme vast: slaap, eten, bewegen of focus.",
-  },
-];
+const BUDDY_LANGUAGE_REPLY =
+  "Ik snap dat je misschien boos of gefrustreerd bent, maar ziektes als scheldwoord gebruiken is niet oké. Wil je het opnieuw zeggen zonder scheldwoorden? Dan kan ik beter met je meedenken.";
 const nutritionButtons = [...document.querySelectorAll("[data-nutrition]")];
 const focusButtons = [...document.querySelectorAll("[data-focus]")];
 const moodButtons = [...document.querySelectorAll("[data-mood]")];
@@ -54,9 +28,13 @@ let selectedMood = "neutraal";
 let buddyChatOpen = false;
 let buddyMessages = [];
 let checkInEditMode = false;
+let journalEditMode = false;
+let selectedJournalDate = "";
+let quitTrackerEditMode = false;
 
 const screens = {
   today: document.querySelector("#screen-today"),
+  journal: document.querySelector("#screen-journal"),
   checkin: document.querySelector("#screen-checkin"),
   result: document.querySelector("#screen-result"),
   week: document.querySelector("#screen-week"),
@@ -65,6 +43,7 @@ const screens = {
 };
 
 const today = todayKey();
+selectedJournalDate = today;
 const topbar = {
   shell: document.querySelector(".app-topbar"),
   eyebrow: document.querySelector("#topbar-eyebrow"),
@@ -73,11 +52,12 @@ const topbar = {
 };
 const appShell = document.querySelector(".app-shell");
 const screenHeadings = {
-  today: { eyebrow: "Feelbetter", title: "Hoe voel ik mij vandaag?", date: formatDate(today) },
-  checkin: { eyebrow: "Check-in", title: "Hoe is je basis vandaag?", date: "" },
+  today: { eyebrow: "Feelbetter", title: "Overzicht", date: formatDate(today) },
+  journal: { eyebrow: "Dagboek", title: "Mijn dagboek", date: formatDate(today) },
+  checkin: { eyebrow: "Daggegevens", title: "Gezondheid kort vastleggen", date: "" },
   result: { eyebrow: "Resultaat", title: "Je analyse", date: formatDate(today) },
-  week: { eyebrow: "Progressie", title: "Discipline door zichtbare progressie", date: "" },
-  buddy: { eyebrow: "Balans Buddy", title: "Praat erover", date: formatDate(today) },
+  week: { eyebrow: "Voortgang", title: "Afkick voortgang", date: "" },
+  buddy: { eyebrow: "Balans Buddy", title: "Wat wil je kwijt?", date: formatDate(today) },
   settings: { eyebrow: "Instellingen", title: "Maak Balans van jou", date: "" },
 };
 
@@ -140,7 +120,17 @@ document.querySelector("#checkin-form").addEventListener("submit", (event) => {
   resetBuddyChat();
   checkInEditMode = false;
   renderAll();
-  showScreen("result");
+  showScreen("today");
+});
+
+document.addEventListener("submit", (event) => {
+  if (event.target?.matches?.("#journal-form")) {
+    saveJournalEntryFromForm(event);
+  }
+
+  if (event.target?.matches?.("#quit-tracker-form")) {
+    saveQuitTrackerFromForm(event);
+  }
 });
 
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
@@ -158,7 +148,7 @@ function showScreen(name) {
     renderCheckIn();
   }
 
-  if (name === "buddy" && getCheckInByDate(today)) {
+  if (name === "buddy") {
     buddyChatOpen = true;
     renderBuddy();
   }
@@ -177,6 +167,7 @@ function showScreen(name) {
 
 function renderAll() {
   renderToday();
+  renderJournal();
   renderCheckIn();
   renderResult();
   renderWeek();
@@ -190,13 +181,14 @@ function setText(selector, value) {
 
 function updateTopbar(name) {
   const heading = screenHeadings[name] || screenHeadings.today;
+  const dateText = name === "journal" ? formatDate(selectedJournalDate) : heading.date;
 
   if (topbar.eyebrow) topbar.eyebrow.textContent = heading.eyebrow;
   if (topbar.title) topbar.title.textContent = heading.title;
 
   if (topbar.date) {
-    topbar.date.textContent = heading.date;
-    topbar.date.hidden = !heading.date;
+    topbar.date.textContent = dateText;
+    topbar.date.hidden = !dateText;
   }
 }
 
@@ -220,44 +212,58 @@ function setTheme(theme) {
 }
 
 function renderToday() {
-  const checkIns = getCheckIns();
-  const checkIn = checkIns.find((entry) => entry.date === today) || null;
+  const journalEntry = getJournalEntryByDate(today);
+  const checkIn = getCheckInByDate(today);
+  const quitTracker = getQuitTracker();
+  const journalStats = calculateJournalStats(getJournalEntries());
+  const healthStats = calculateHealthDashboardStats(getCheckIns());
+  const dailyLesson = getHomePracticalReminder({ checkIn, journalEntry, quitTracker });
+  const daysStopped = quitTracker ? calculateDaysSince(quitTracker.startDate) : null;
   const target = document.querySelector("#today-content");
-  const startDayInsight = getStartDayInsight(checkIn, today);
-
-  if (!checkIn) {
-    target.innerHTML = `
-      <div class="stack">
-        ${startDayInsightCard(startDayInsight)}
-        <div class="card empty-state">
-          <h2>Nog geen check-in vandaag</h2>
-          <p>Je hoeft niet perfect te zijn. Consistentie telt.</p>
-          <div class="actions">
-            <button class="primary-button" type="button" onclick="showScreen('checkin')">Start check-in</button>
-          </div>
-        </div>
-      </div>
-    `;
-    return;
-  }
-
-  const balance = calculateBalanceScore(checkIn);
 
   target.innerHTML = `
     <div class="stack">
-      <div class="card">
-        <p class="analysis-label">Vandaag ingevuld</p>
-        <div class="metric-grid">
-          ${metric("Score", balance.score)}
-          ${metric("Slaap", `${checkIn.sleepHours}u`)}
-          ${metric("Focus", getFocusLabel(checkIn.focus))}
+      ${startDayInsightCard(dailyLesson)}
+      <div class="card dashboard-card">
+        <p class="analysis-label">Overzicht</p>
+        <h2 class="analysis-title">Je stand van vandaag</h2>
+        <div class="metric-grid dashboard-grid">
+          ${metric("Dagboek", journalEntry ? "Vandaag" : "Nog niet")}
+          ${metric("Deze week", `${journalStats.entriesThisWeek}/7`)}
+          ${metric("Doel", quitTracker ? escapeHtml(quitTracker.label) : "Niet ingesteld")}
         </div>
       </div>
-      ${startDayInsightCard(startDayInsight)}
-      <div class="actions">
-        <button class="primary-button" type="button" onclick="showScreen('buddy')">Praat erover</button>
-        <button class="secondary-button" type="button" onclick="showScreen('result')">Bekijk analyse</button>
+      <div class="card dashboard-card">
+        <p class="analysis-label">Gezondheid</p>
+        <h2 class="analysis-title">${healthStats.title}</h2>
+        <div class="metric-grid dashboard-grid">
+          ${metric("Slaap", healthStats.sleep)}
+          ${metric("Voeding", healthStats.nutrition)}
+          ${metric("Balans", healthStats.balance)}
+        </div>
+        <p class="analysis-text">${healthStats.description}</p>
+        ${healthStats.hasData ? "" : `<button class="secondary-button" type="button" onclick="showScreen('checkin')">Daggegevens invullen</button>`}
       </div>
+      <div class="card dashboard-card">
+        <p class="analysis-label">Afkick voortgang</p>
+        <h2 class="analysis-title">${quitTracker ? getDashboardProgressTitle(quitTracker, daysStopped) : "Nog geen doel ingesteld"}</h2>
+        <div class="week-grid">
+          ${metric("Gestopt", quitTracker ? formatStoppedDuration(daysStopped) : "-")}
+          ${metric("Sinds", quitTracker ? formatShortDate(quitTracker.startDate) : "-")}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderJournal() {
+  const journalEntry = getJournalEntryByDate(selectedJournalDate);
+  const target = document.querySelector("#journal-content");
+
+  target.innerHTML = `
+    <div class="stack">
+      ${journalDateNavigator()}
+      ${journalCard(journalEntry, selectedJournalDate)}
     </div>
   `;
 }
@@ -286,7 +292,7 @@ function renderCheckIn() {
   summary.innerHTML = `
     <div class="card">
       <p class="analysis-label">Vandaag ingevuld</p>
-      <h2 class="analysis-title">Je check-in van vandaag</h2>
+      <h2 class="analysis-title">Je daggegevens</h2>
       <div class="metric-grid checkin-summary-grid">
         ${metric("Slaap", `${checkIn.sleepHours}u`)}
         ${metric("Focus", getFocusLabel(checkIn.focus))}
@@ -326,73 +332,74 @@ function renderResult() {
     ${insightCard(checkIn)}
     ${checkIn.note ? `<div class="card"><strong>Je notitie</strong><p>${escapeHtml(checkIn.note)}</p></div>` : ""}
     ${buddyChatCard(checkIn)}
-    <button class="primary-button" type="button" onclick="showScreen('week')">Bekijk progressie</button>
+    <button class="primary-button" type="button" onclick="showScreen('week')">Bekijk voortgang</button>
     <button class="secondary-button" type="button" onclick="showScreen('checkin')">Check-in bekijken</button>
   `;
 }
 
 function renderWeek() {
-  const checkIns = getCheckIns();
-  const stats = calculateWeeklyStats(checkIns);
-  const discipline = calculateDisciplineScore(checkIns);
-  const comparison = compareWithPreviousWeek(checkIns);
-  const weeklyAnalysis = createWeeklyAnalysis(checkIns);
+  const quitTracker = getQuitTracker();
   const target = document.querySelector("#week-content");
-
-  if (stats.daysFilled === 0) {
-    target.innerHTML = `
-      <div class="card empty-state">
-        <h2>Nog geen progressie</h2>
-        <p>Je bouwt discipline door terug te komen, niet door perfecte dagen.</p>
-        <button class="primary-button" type="button" onclick="showScreen('checkin')">Eerste check-in invullen</button>
-      </div>
-    `;
-    return;
-  }
 
   target.innerHTML = `
     <div class="stack">
-      <div class="card">
-        <p class="analysis-label">Deze week</p>
-        <div class="week-grid">
-          ${metric("Reeks", formatDayCount(discipline.streak))}
-          ${metric("Check-ins", `${discipline.checkInsThisWeek}/7`)}
-          ${metric("Balans", stats.averageBalanceScore)}
-          ${metric("Discipline", discipline.score)}
-        </div>
+      ${quitTracker && !quitTrackerEditMode ? quitTrackerSummaryCard(quitTracker) : quitTrackerCard(quitTracker, { full: true })}
+      ${quitTracker ? quitCalendarCard(quitTracker) : ""}
+    </div>
+  `;
+}
+
+function recentJournalEntriesCard(entries) {
+  const recentEntries = entries
+    .filter((entry) => lastSevenDateKeys().includes(entry.date))
+    .slice(0, 7);
+
+  if (!recentEntries.length) {
+    return `
+      <div class="card empty-state">
+        <p class="analysis-label">Dagboek</p>
+        <h2>Nog niets opgeschreven deze week</h2>
+        <p>Begin met één kort dagboekmoment. Teruglezen wordt pas waardevol als je een paar dagen hebt vastgelegd.</p>
+        <button class="primary-button" type="button" onclick="showScreen('journal')">Vandaag opschrijven</button>
       </div>
-      <div class="card dark">
-        <p class="analysis-label">Progressie</p>
-        <h2>${comparison.bestImprovement}</h2>
-        <p class="analysis-text">${discipline.explanation}</p>
+    `;
+  }
+
+  return `
+    <div class="card">
+      <p class="analysis-label">Dagboek deze week</p>
+      <h2 class="analysis-title">${recentEntries.length} ${recentEntries.length === 1 ? "moment" : "momenten"} vastgelegd</h2>
+      <div class="journal-list">
+        ${recentEntries
+          .map((entry) => {
+            return `
+              <div class="journal-list-item">
+                <strong>${formatDate(entry.date)}</strong>
+                <p>${escapeHtml(entry.text)}</p>
+              </div>
+            `;
+          })
+          .join("")}
       </div>
-      ${weeklyAnalysisCard(weeklyAnalysis)}
-      <div class="card">
-        <div class="week-grid">
-          ${metric("Slaap", `${stats.averageSleep}u`)}
-          ${metric("Focus", stats.averageFocus)}
-          ${metric("Stemming", stats.averageMood)}
-          ${metric("Verschil", comparison.hasPreviousWeek ? formatDelta(comparison.balanceDelta) : "-")}
-        </div>
+      <div class="tip-box">
+        <strong>Meenemen</strong>
+        <p>${createJournalTakeaway(recentEntries)}</p>
       </div>
     </div>
   `;
 }
 
+function createJournalTakeaway(entries) {
+  if (entries.length >= 4) {
+    return "Je bouwt overzicht op door terug te schrijven. Let komende week op wat je helpt om moeilijke momenten door te komen.";
+  }
+
+  return "Schrijf nog een paar dagen door. Daarna zie je beter wat vaak terugkomt.";
+}
+
 function renderBuddy() {
   const checkIn = getCheckInByDate(today);
   const target = document.querySelector("#buddy-content");
-
-  if (!checkIn) {
-    target.innerHTML = `
-      <div class="card empty-state">
-        <h2>Eerst even inchecken</h2>
-        <p>De buddy gebruikt je check-in van vandaag als context. Vul die eerst kort in.</p>
-        <button class="primary-button" type="button" onclick="showScreen('checkin')">Check-in invullen</button>
-      </div>
-    `;
-    return;
-  }
 
   target.innerHTML = buddyChatCard(checkIn);
 }
@@ -425,6 +432,244 @@ function metric(label, value) {
   return `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`;
 }
 
+function calculateJournalStats(entries) {
+  const weeklyEntries = entries.filter((entry) => lastSevenDateKeys().includes(entry.date));
+
+  return {
+    entriesThisWeek: weeklyEntries.length,
+  };
+}
+
+function calculateHealthDashboardStats(checkIns) {
+  const todayEntry = getCheckInByDate(today);
+  const weeklyEntries = getEntriesForKeys(checkIns, lastSevenDateKeys()).sort((a, b) => a.date.localeCompare(b.date));
+  const source = todayEntry || weeklyEntries[weeklyEntries.length - 1] || null;
+
+  if (!source) {
+    return {
+      title: "Nog geen gezondheidsdata",
+      sleep: "Niet ingevuld",
+      nutrition: "Niet ingevuld",
+      balance: "Niet ingevuld",
+      description: "Deze kaart blijft leeg tot de gebruiker zelf slaap, voeding, focus en stemming invult.",
+      hasData: false,
+    };
+  }
+
+  const sleepValue = todayEntry ? source.sleepHours : roundOne(average(weeklyEntries.map((entry) => entry.sleepHours)));
+  const balance = calculateBalanceScore(source).score;
+  const balanceLabel = balance >= 75 ? "Sterk" : balance >= 60 ? "Oké" : "Laag";
+
+  return {
+    title: todayEntry ? "Vandaag ingevuld" : "Laatste 7 dagen",
+    sleep: `${sleepValue}u`,
+    nutrition: getNutritionLabel(source.nutrition),
+    balance: balanceLabel,
+    description: todayEntry
+      ? "Gebaseerd op de daggegevens die vandaag zijn ingevuld: slaap, voeding, focus en stemming."
+      : "Gebaseerd op de meest recente daggegevens uit de afgelopen 7 dagen.",
+    hasData: true,
+  };
+}
+
+function getDashboardProgressTitle(tracker, daysStopped) {
+  if (daysStopped === 0) return `Vandaag gestart met ${escapeHtml(tracker.label)}`;
+  return `${formatDayCount(daysStopped)} gestopt met ${escapeHtml(tracker.label)}`;
+}
+
+function journalDateNavigator() {
+  const isTodaySelected = selectedJournalDate === today;
+
+  return `
+    <div class="diary-nav" aria-label="Dagboek dagen">
+      <button class="secondary-button diary-nav-button" type="button" onclick="goToPreviousJournalDay()" aria-label="Vorige dag">‹</button>
+      <div>
+        <p class="analysis-label">Bladeren</p>
+        <strong>${formatDate(selectedJournalDate)}</strong>
+      </div>
+      <button class="secondary-button diary-nav-button" type="button" onclick="goToNextJournalDay()" ${isTodaySelected ? "disabled" : ""} aria-label="Volgende dag">›</button>
+    </div>
+  `;
+}
+
+function journalCard(entry, dateKey = selectedJournalDate) {
+  if (entry && !journalEditMode) {
+    return `
+      <div class="card journal-card diary-card">
+        <div class="diary-header">
+          <p class="analysis-label">Dagboek</p>
+          <h2 class="analysis-title">Mijn dag</h2>
+          <span class="diary-date">${formatDate(entry.date)}</span>
+        </div>
+        <p class="journal-entry-text diary-page">${escapeHtml(entry.text)}</p>
+        <div class="actions">
+          <button class="primary-button" type="button" onclick="openJournalEditor()">Wijzig dagboek</button>
+          <button class="secondary-button" type="button" onclick="showScreen('buddy')">Praat hierover</button>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <form class="card journal-card diary-card" id="journal-form">
+      <div class="diary-header">
+        <p class="analysis-label">Dagboek</p>
+        <h2 class="analysis-title">Mijn dag</h2>
+        <span class="diary-date">${formatDate(dateKey)}</span>
+      </div>
+      <label class="field diary-field">
+        <span>Schrijfmoment</span>
+        <textarea class="diary-textarea" id="journal-text" rows="7" maxlength="700" placeholder="${entry ? "Werk je dagboek bij..." : "Nog niets geschreven op deze dag..."}">${entry ? escapeHtml(entry.text) : ""}</textarea>
+      </label>
+      <p class="error-message" id="journal-error" role="alert"></p>
+      <button class="primary-button" type="submit">${entry ? "Dagboek opslaan" : "Opschrijven"}</button>
+    </form>
+  `;
+}
+
+function quitTrackerCard(tracker, options = {}) {
+  const isFull = options.full === true;
+
+  if (tracker && !quitTrackerEditMode) {
+    const daysStopped = calculateDaysSince(tracker.startDate);
+    const headline = daysStopped === 0
+      ? `Vandaag gestart met ${escapeHtml(tracker.label)}`
+      : `${formatDayCount(daysStopped)} gestopt met ${escapeHtml(tracker.label)}`;
+    return `
+      <div class="card quit-card ${isFull ? "quit-card-full" : ""}">
+        <div>
+          <p class="analysis-label">Voortgang</p>
+          <h2 class="analysis-title">${headline}</h2>
+          <p class="analysis-text">Sinds ${formatDate(tracker.startDate)}. Elke dag telt, ook als een dag moeilijk voelt.</p>
+        </div>
+        <div class="metric-grid">
+          ${metric("Gestopt", formatStoppedDuration(daysStopped))}
+          ${metric("Sinds", formatShortDate(tracker.startDate))}
+          ${metric("Vandaag", "Volhouden")}
+        </div>
+        <div class="tip-box">
+          <strong>Bij een terugval</strong>
+          <p>Je voortgang is niet waardeloos. Je kunt opnieuw beginnen zonder jezelf af te schrijven.</p>
+        </div>
+        <div class="actions">
+          <button class="secondary-button" type="button" onclick="openQuitTrackerEditor()">Aanpassen</button>
+          <button class="secondary-button" type="button" onclick="restartQuitTrackerToday()">Opnieuw starten vanaf vandaag</button>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <form class="card quit-card" id="quit-tracker-form">
+      <div>
+        <p class="analysis-label">Voortgang</p>
+        <h2 class="analysis-title">Waar wil je mee stoppen?</h2>
+        <p class="analysis-text">Houd simpel bij hoelang je ergens vanaf blijft. Dit kan gaan om roken, alcohol, blowen, gokken of iets anders.</p>
+      </div>
+      <label class="field">
+        <span>Ik wil stoppen met</span>
+        <input id="quit-label" type="text" maxlength="40" placeholder="Bijv. roken, alcohol, gokken" value="${tracker ? escapeAttribute(tracker.label) : ""}" />
+      </label>
+      <label class="field">
+        <span>Sinds wanneer?</span>
+        <input id="quit-start-date" type="date" max="${today}" value="${tracker?.startDate || today}" />
+      </label>
+      <p class="error-message" id="quit-tracker-error" role="alert"></p>
+      <button class="primary-button" type="submit">${tracker ? "Voortgang opslaan" : "Start bijhouden"}</button>
+    </form>
+  `;
+}
+
+function quitTrackerSummaryCard(tracker) {
+  return `
+    <div class="card quit-card">
+      <div>
+        <p class="analysis-label">Verslaving</p>
+        <h2 class="analysis-title">${escapeHtml(tracker.label)}</h2>
+        <p class="analysis-text">Sinds ${formatDate(tracker.startDate)}</p>
+      </div>
+    </div>
+  `;
+}
+
+function quitCalendarCard(tracker) {
+  const calendarDays = getQuitCalendarDays(tracker.startDate);
+  const monthTitle = new Intl.DateTimeFormat("nl-NL", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${today.slice(0, 7)}-01T12:00:00`));
+
+  return `
+    <div class="card quit-calendar-card">
+      <div>
+        <p class="analysis-label">Kalender</p>
+        <h2 class="analysis-title">Afgevinkt sinds ${formatShortDate(tracker.startDate)}</h2>
+        <p class="analysis-text">Elke afgevinkte dag telt vanaf je startdatum tot vandaag.</p>
+      </div>
+      <div class="quit-calendar">
+        <div class="quit-calendar-header">${monthTitle}</div>
+        <div class="quit-calendar-weekdays" aria-hidden="true">
+          ${["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"].map((day) => `<span>${day}</span>`).join("")}
+        </div>
+        <div class="quit-calendar-grid" aria-label="Afkick kalender">
+          ${calendarDays
+            .map((day) => {
+              if (day.blank) {
+                return `<span class="quit-calendar-day blank" aria-hidden="true"></span>`;
+              }
+
+              const status = day.checked ? "Afgevinkt" : day.future ? "Nog niet" : "Voor start";
+              const classes = [
+                "quit-calendar-day",
+                day.checked ? "checked" : "",
+                day.future ? "future" : "",
+                day.beforeStart ? "before-start" : "",
+                day.isToday ? "today" : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
+
+              return `
+                <span class="${classes}" aria-label="${day.label}: ${status}">
+                  <span>${day.dayNumber}</span>
+                  ${day.checked ? `<strong aria-hidden="true">✓</strong>` : ""}
+                </span>
+              `;
+            })
+            .join("")}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function getQuitCalendarDays(startDateKey) {
+  const currentMonth = today.slice(0, 7);
+  const monthStart = new Date(`${currentMonth}-01T12:00:00`);
+  const month = monthStart.getMonth();
+  const year = monthStart.getFullYear();
+  const firstDayOffset = (monthStart.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const blanks = Array.from({ length: firstDayOffset }, () => ({ blank: true }));
+  const days = Array.from({ length: daysInMonth }, (_, index) => {
+    const dayNumber = index + 1;
+    const dateKey = toDateKey(new Date(year, month, dayNumber, 12));
+    const checked = dateKey >= startDateKey && dateKey <= today;
+
+    return {
+      dayNumber,
+      dateKey,
+      label: formatDate(dateKey),
+      checked,
+      beforeStart: dateKey < startDateKey,
+      future: dateKey > today,
+      isToday: dateKey === today,
+    };
+  });
+
+  return [...blanks, ...days];
+}
+
 function personalInsightCard(insight) {
   return `
     <div class="card">
@@ -439,14 +684,22 @@ function personalInsightCard(insight) {
 function startDayInsightCard(insight) {
   return `
     <div class="card">
-      <p class="analysis-label">Start de dag met één inzicht</p>
+      <p class="analysis-label">Praktisch vandaag</p>
       <h2 class="analysis-title">${insight.lesson}</h2>
       <div class="tip-box">
-        <strong>Vandaag toepassen</strong>
+        <strong>Als het lastig wordt</strong>
         <p>${insight.action}</p>
       </div>
     </div>
   `;
+}
+
+function getBuddyIntroText(checkIn) {
+  if (checkIn) {
+    return "Een rustige plek om na je check-in te zeggen wat er echt speelt. Geen diagnose, geen therapie, wel luisteren en doorvragen.";
+  }
+
+  return "Een rustige plek om iets op te schrijven zonder oordeel. Geen diagnose, geen therapie, wel luisteren, ordenen en meedenken.";
 }
 
 function coachMomentCard(moment) {
@@ -492,10 +745,10 @@ function buddyChatCard(checkIn) {
       <div class="card buddy-card">
         <div>
           <p class="analysis-label">Balans Buddy</p>
-          <h2 class="analysis-title">Even napraten over je check-in?</h2>
-          <p class="analysis-text">Een korte plek om je gedachten te ordenen. Geen diagnose, geen therapie, alleen rustig reflecteren.</p>
+          <h2 class="analysis-title">${checkIn ? "Even napraten over je check-in?" : "Wat wil je kwijt?"}</h2>
+          <p class="analysis-text">${getBuddyIntroText(checkIn)}</p>
         </div>
-        <button class="primary-button" type="button" onclick="openBuddyChat()">Praat erover</button>
+        <button class="primary-button" type="button" onclick="openBuddyChat()">${checkIn ? "Praat erover" : "Gesprek starten"}</button>
       </div>
     `;
   }
@@ -505,11 +758,12 @@ function buddyChatCard(checkIn) {
       <div class="buddy-header">
         <div>
           <p class="analysis-label">Balans Buddy</p>
-          <h2 class="analysis-title">Praat erover</h2>
+          <h2 class="analysis-title">Wat wil je kwijt?</h2>
         </div>
         <button class="secondary-button buddy-close" type="button" onclick="closeBuddyChat()">Sluiten</button>
       </div>
       <p class="buddy-disclaimer">${BUDDY_SAFETY_MESSAGE}</p>
+      ${checkIn ? `<p class="buddy-context-note">Je check-in van vandaag kan helpen als context, maar je mag ook gewoon vrij typen.</p>` : ""}
       ${
         buddyMessages.length
           ? `<div class="buddy-log" role="log" aria-live="polite">
@@ -525,7 +779,7 @@ function buddyChatCard(checkIn) {
       <form class="buddy-input" onsubmit="sendBuddyMessage(event)">
         <label class="field">
           <span class="visually-hidden">Bericht aan Balans Buddy</span>
-          <textarea data-buddy-message rows="3" maxlength="420" placeholder="Typ kort hoe je je voelt..." onkeydown="handleBuddyMessageKeyDown(event)"></textarea>
+          <textarea data-buddy-message rows="3" maxlength="420" placeholder="Typ wat je kwijt wil..." onkeydown="handleBuddyMessageKeyDown(event)"></textarea>
         </label>
         <button class="primary-button" type="submit">Verstuur</button>
       </form>
@@ -534,11 +788,8 @@ function buddyChatCard(checkIn) {
 }
 
 function openBuddyChat() {
-  const checkIn = getCheckInByDate(today);
-
-  if (!checkIn) return;
-
   buddyChatOpen = true;
+  renderToday();
   renderResult();
   renderBuddy();
   setTimeout(focusBuddyInput, 0);
@@ -557,6 +808,128 @@ function openCheckInEditor() {
   setTimeout(() => document.querySelector("#sleep-hours")?.focus(), 0);
 }
 
+function openJournalEditor() {
+  journalEditMode = true;
+  renderJournal();
+  showScreen("journal");
+  setTimeout(() => document.querySelector("#journal-text")?.focus(), 0);
+}
+
+function goToPreviousJournalDay() {
+  selectedJournalDate = shiftDateKey(selectedJournalDate, -1);
+  journalEditMode = false;
+  renderJournal();
+  updateTopbar("journal");
+}
+
+function goToNextJournalDay() {
+  const nextDate = shiftDateKey(selectedJournalDate, 1);
+
+  selectedJournalDate = nextDate > today ? today : nextDate;
+  journalEditMode = false;
+  renderJournal();
+  updateTopbar("journal");
+}
+
+function saveJournalEntryFromForm(event) {
+  event.preventDefault();
+
+  const form = event.target;
+  const text = form.querySelector("#journal-text")?.value.trim() || "";
+  const error = form.querySelector("#journal-error");
+
+  if (text.length < 3) {
+    if (error) {
+      error.textContent = "Schrijf minimaal één korte zin op.";
+      error.classList.add("visible");
+    }
+    return;
+  }
+
+  error?.classList.remove("visible");
+  saveJournalEntry({
+    date: selectedJournalDate,
+    text,
+    updatedAt: new Date().toISOString(),
+  });
+  journalEditMode = false;
+  renderAll();
+  showScreen("journal");
+}
+
+function openQuitTrackerEditor() {
+  quitTrackerEditMode = true;
+  renderAll();
+  showScreen("week");
+  setTimeout(() => document.querySelector("#quit-label")?.focus(), 0);
+}
+
+function saveQuitTrackerFromForm(event) {
+  event.preventDefault();
+
+  const form = event.target;
+  const label = form.querySelector("#quit-label")?.value.trim() || "";
+  const startDate = form.querySelector("#quit-start-date")?.value || today;
+  const error = form.querySelector("#quit-tracker-error");
+
+  if (label.length < 2) {
+    if (error) {
+      error.textContent = "Vul kort in waarmee je wilt stoppen.";
+      error.classList.add("visible");
+    }
+    return;
+  }
+
+  if (!isValidDateKey(startDate) || startDate > today) {
+    if (error) {
+      error.textContent = "Kies een geldige startdatum, niet in de toekomst.";
+      error.classList.add("visible");
+    }
+    return;
+  }
+
+  error?.classList.remove("visible");
+  saveQuitTracker({
+    label,
+    startDate,
+    updatedAt: new Date().toISOString(),
+  });
+  quitTrackerEditMode = false;
+  renderAll();
+  showScreen("week");
+}
+
+function restartQuitTrackerToday() {
+  const tracker = getQuitTracker();
+  if (!tracker) return;
+
+  saveQuitTracker({
+    ...tracker,
+    startDate: today,
+    updatedAt: new Date().toISOString(),
+  });
+  quitTrackerEditMode = false;
+  renderAll();
+  showScreen("week");
+}
+
+function clearLocalAppData() {
+  const confirmed = window.confirm("Weet je zeker dat je je dagboek, daggegevens en voortgang op dit apparaat wilt wissen?");
+
+  if (!confirmed) return;
+
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(JOURNAL_STORAGE_KEY);
+  localStorage.removeItem(QUIT_TRACKER_STORAGE_KEY);
+  buddyChatOpen = false;
+  buddyMessages = [];
+  checkInEditMode = false;
+  journalEditMode = false;
+  quitTrackerEditMode = false;
+  renderAll();
+  showScreen("today");
+}
+
 function sendBuddyMessage(event) {
   event.preventDefault();
 
@@ -564,7 +937,7 @@ function sendBuddyMessage(event) {
   const text = input?.value.trim();
   const checkIn = getCheckInByDate(today);
 
-  if (!text || !checkIn) return;
+  if (!text) return;
 
   buddyMessages = [
     ...buddyMessages,
@@ -625,6 +998,10 @@ function generateBuddyReply(message, todayEntry, history = []) {
     return BUDDY_CRISIS_REPLY;
   }
 
+  if (detectDiseaseSwearMessage(message)) {
+    return BUDDY_LANGUAGE_REPLY;
+  }
+
   const text = normalizeBuddyText(message);
   const previousBuddyMessage = getLastBuddyMessage(history);
   const currentConversationTopic = inferCurrentConversationTopic(text);
@@ -646,8 +1023,28 @@ function generateBuddyReply(message, todayEntry, history = []) {
     return "Ik heb zelf geen gevoelens, maar ik ben er om rustig met jou mee te denken. Hoe is het nu met jou?";
   }
 
+  if (mentionsMedicalDiseaseContext(text)) {
+    return createMedicalDiseaseReply(text);
+  }
+
   if (detectUncertaintyMessage(message)) {
     return "Dat is oké. Je hoeft het niet meteen scherp te hebben. Als je één woord moest kiezen voor nu, welk woord past dan het best?";
+  }
+
+  if (detectListeningPreference(message)) {
+    return "Oké, dan hoef ik het niet meteen op te lossen. Vertel maar rustig: wat is het belangrijkste dat je even kwijt wil?";
+  }
+
+  if (detectOrderingPreference(message)) {
+    return "Oké, dan maken we het overzichtelijk. Wat is er gebeurd, en wat gaat er vooral door je hoofd?";
+  }
+
+  if (detectActionPreference(message)) {
+    return "Oké, dan zoeken we één haalbare stap. Wat zou over 10 minuten al iets lichter mogen voelen?";
+  }
+
+  if (mentionsTalkingBarrier(text)) {
+    return "Dat je dit lastig vindt om te zeggen is begrijpelijk. Je hoeft het hier niet mooi te formuleren. Wat zou je willen dat iemand hiervan begreep?";
   }
 
   if (detectPositiveWellbeingMessage(message)) {
@@ -676,6 +1073,14 @@ function generateBuddyReply(message, todayEntry, history = []) {
 
   if (mentionsOverstimulated(text)) {
     return createOverstimulatedReply(text);
+  }
+
+  if (mentionsRelapse(text)) {
+    return createRelapseReply(text);
+  }
+
+  if (mentionsCraving(text)) {
+    return createCravingReply(text);
   }
 
   if (mentionsLowMotivation(text)) {
@@ -762,27 +1167,27 @@ function generateBuddyReply(message, todayEntry, history = []) {
     return "Ik hoor je. Wat voelt hierin het zwaarst of meest aanwezig?\n\nKleine stap: geef het gevoel eerst een naam, zonder het meteen te hoeven veranderen.";
   }
 
-  if (todayEntry.focus === "slecht" || todayEntry.focus === "moeilijk") {
+  if (todayEntry?.focus === "slecht" || todayEntry?.focus === "moeilijk") {
     return "Ik neem je check-in even mee: focus leek vandaag lastig. Speelt dat nu ook mee?\n\nKleine stap: kies alleen de eerste handeling, niet de hele taak.";
   }
 
-  if (todayEntry.sleepHours > 0 && todayEntry.sleepHours < 6) {
+  if (todayEntry?.sleepHours > 0 && todayEntry.sleepHours < 6) {
     return "Ik neem je check-in even mee: met weinig slaap kan alles sneller zwaar voelen. Wat mag vandaag iets minder perfect?\n\nKleine stap: kies iets kleins dat ook moe haalbaar is.";
   }
 
-  if (todayEntry.mood === "slecht") {
+  if (todayEntry?.mood === "slecht") {
     return "Ik neem je check-in even mee: je stemming leek lager. Wat zou vandaag een klein beetje zachter maken?\n\nKleine stap: doe iets eenvoudigs dat geen prestatie hoeft te zijn.";
   }
 
-  if (todayEntry.nutrition === "slecht") {
+  if (todayEntry?.nutrition === "slecht") {
     return "Ik neem je check-in even mee: voeding gaf vandaag weinig steun. Wat zou nu haalbaar zijn?\n\nKleine stap: kies iets simpels met water erbij, zonder er een perfecte maaltijd van te maken.";
   }
 
-  if (todayEntry.note) {
+  if (todayEntry?.note) {
     return "Je notitie laat zien dat er iets speelt. Wat voelt op dit moment het meest aanwezig?\n\nKleine stap: benoem een ding dat je kunt doen en een ding dat even mag wachten.";
   }
 
-  return "Dank je dat je dit opschrijft. Wat wil je vooral beter begrijpen aan dit gevoel?\n\nKleine stap: kies een rustige volgende handeling voor de komende 10 minuten.";
+  return "Dank je dat je dit opschrijft. Ik wil eerst goed begrijpen wat je bedoelt: wil je vooral dat ik luister, help ordenen, of meedenk over een stap?";
 }
 
 function getLastBuddyMessage(history) {
@@ -808,6 +1213,7 @@ function inferConversationTopic(text, history) {
 function inferCurrentConversationTopic(text) {
   if (mentionsPhysicalSymptom(text)) return "body";
   if (mentionsPhysicalPain(text)) return "pain";
+  if (mentionsCraving(text) || mentionsRelapse(text)) return "stress";
   if (mentionsRelationshipStress(text) || mentionsRumination(text) || mentionsOverstimulated(text)) return "stress";
   if (mentionsLowMotivation(text)) return "focus";
   if (mentionsAnger(text)) return "mood";
@@ -839,6 +1245,8 @@ function isContextualHealthFollowUp(text) {
     mentionsRelationshipStress(text) ||
     mentionsRumination(text) ||
     mentionsOverstimulated(text) ||
+    mentionsCraving(text) ||
+    mentionsRelapse(text) ||
     mentionsLowMotivation(text) ||
     mentionsAnger(text) ||
     mentionsPressure(text) ||
@@ -936,7 +1344,7 @@ function createSleepFollowUpReply(text, todayEntry) {
     return "Piekeren kan slaap echt breken. Wat blijft er vooral rondgaan in je hoofd?\n\nKleine stap: schrijf het kort op en kies één vast moment morgen om erop terug te komen.";
   }
 
-  if (todayEntry.sleepHours > 0 && todayEntry.sleepHours < 6) {
+  if (todayEntry?.sleepHours > 0 && todayEntry.sleepHours < 6) {
     return "Met weinig slaap hoeft vandaag niet perfect te zijn. Wat kan je vandaag lichter maken?\n\nKleine stap: plan één rustmoment zonder scherm.";
   }
 
@@ -1017,6 +1425,32 @@ function detectCrisisMessage(message) {
   return crisisPatterns.some((pattern) => pattern.test(text));
 }
 
+function detectDiseaseSwearMessage(message) {
+  const text = normalizeBuddyText(message);
+
+  if (!text) return false;
+
+  const diseaseWords = /\b(kanker|kk|kkr|tyfus|tering|pleuris|aids|corona|covid)\b/;
+
+  if (!diseaseWords.test(text)) return false;
+  if (mentionsMedicalDiseaseContext(text)) return false;
+
+  return (
+    /\b(kanker|kk|kkr|tyfus|tering|pleuris)\b/.test(text) ||
+    /\b(aids|corona|covid)\s*(lijer|mongool|idioot|sukkel|debiel|hoer|wijf|vent)\b/.test(text)
+  );
+}
+
+function mentionsMedicalDiseaseContext(text) {
+  const diseaseWords = /\b(kanker|aids|corona|covid|tyfus|tering|pleuris)\b/;
+  const medicalContext =
+    /\b(ik|mijn|me|mn|familie|moeder|vader|broer|zus|vriend|vriendin|partner|oma|opa|iemand)\b.{0,50}\b(heb|heeft|had|kreeg|krijg|diagnose|gediagnosticeerd|ziek|ziekte|besmet|positief|test|getest|behandeling|arts|dokter|ziekenhuis|chemo|overleden|gestorven)\b/;
+  const reverseMedicalContext =
+    /\b(heb|heeft|had|kreeg|krijg|diagnose|gediagnosticeerd|ziek|ziekte|besmet|positief|test|getest|behandeling|arts|dokter|ziekenhuis|chemo|overleden|gestorven)\b.{0,50}\b(kanker|aids|corona|covid|tyfus|tering|pleuris)\b/;
+
+  return diseaseWords.test(text) && (medicalContext.test(text) || reverseMedicalContext.test(text));
+}
+
 function detectOutOfScopeMessage(message) {
   const text = normalizeBuddyText(message);
 
@@ -1065,6 +1499,21 @@ function detectClarificationQuestion(message) {
   return /wat bedoel je|hoe bedoel je|ik snap het niet|leg uit/.test(text);
 }
 
+function detectListeningPreference(message) {
+  const text = normalizeBuddyText(message).replace(/[!.?]+$/g, "");
+  return /^(luisteren|luister|alleen luisteren|vooral luisteren|gewoon luisteren|ik wil dat je luistert)$/.test(text);
+}
+
+function detectOrderingPreference(message) {
+  const text = normalizeBuddyText(message).replace(/[!.?]+$/g, "");
+  return /^(ordenen|help ordenen|overzicht|duidelijkheid|op een rijtje|rijtje maken|ik wil overzicht)$/.test(text);
+}
+
+function detectActionPreference(message) {
+  const text = normalizeBuddyText(message).replace(/[!.?]+$/g, "");
+  return /^(stap|een stap|volgende stap|actie|advies|meedenken|denk mee|wat kan ik doen)$/.test(text);
+}
+
 function detectPositiveWellbeingMessage(message) {
   const text = normalizeBuddyText(message).replace(/[!.?]+$/g, "");
   return /^(goed|gaat goed|het gaat goed|prima|lekker|best goed|super|top|oke goed|wel goed)$/.test(text);
@@ -1111,7 +1560,7 @@ function createNegativeWellbeingReply(text) {
 }
 
 function createTiredReply(todayEntry) {
-  if (todayEntry.sleepHours > 0 && todayEntry.sleepHours < 6) {
+  if (todayEntry?.sleepHours > 0 && todayEntry.sleepHours < 6) {
     return "Dat past bij je korte slaap. Vandaag hoeft niet op volle kracht. Wat moet echt, en wat mag wachten?\n\nKleine stap: kies de lichtste versie van je belangrijkste taak.";
   }
 
@@ -1154,6 +1603,14 @@ function createOverstimulatedReply(text) {
   return "Overprikkeling kan maken dat alles te veel voelt. Wat is nu de grootste prikkel: geluid, mensen, taken of schermen?\n\nKleine stap: haal één prikkel weg voor 10 minuten.";
 }
 
+function createCravingReply(text) {
+  return "Die verleiding kan heel dwingend voelen, maar je hoeft niet meteen te handelen. Wat triggert het nu vooral: plek, gevoel, persoon of gewoonte?\n\nKleine stap: stel 10 minuten uit en doe iets fysieks kleins, zoals water drinken, wandelen of iemand appen.";
+}
+
+function createRelapseReply(text) {
+  return "Een terugval betekent niet dat alles mislukt is. Het is vooral informatie over een kwetsbaar moment. Wat gebeurde er vlak ervoor?\n\nKleine stap: schrijf één trigger op en kies wat je de volgende keer eerder kunt doen.";
+}
+
 function createLowMotivationReply(text) {
   if (/moe|energie|uitgeput|kapot/.test(text)) {
     return "Als je energie laag is, voelt motivatie vaak ook laag. Wat is de kleinste versie die nog telt?\n\nKleine stap: doe alleen de eerste twee minuten en stop daarna bewust als dat nodig is.";
@@ -1164,6 +1621,14 @@ function createLowMotivationReply(text) {
 
 function createAngerReply(text) {
   return "Boosheid zegt vaak dat er iets belangrijk voor je is. Wat werd er geraakt: je grens, je tijd, of je gevoel van respect?\n\nKleine stap: reageer pas nadat je één rustige zin hebt opgeschreven.";
+}
+
+function createMedicalDiseaseReply(text) {
+  if (/vader|moeder|broer|zus|vriend|vriendin|partner|oma|opa|familie|iemand/.test(text)) {
+    return "Dat is heftig om mee te dragen. Wat maakt je nu het meest bezorgd: wat er kan gebeuren, hoe je ermee omgaat, of dat je je machteloos voelt?\n\nKleine stap: stuur of zeg één eerlijke zin tegen iemand die je vertrouwt.";
+  }
+
+  return "Dat klinkt als iets dat veel spanning kan geven. Wat merk je nu het meest: zorgen in je hoofd, spanning in je lichaam, of praktische vragen?\n\nKleine stap: schrijf één vraag op die je aan een arts of iemand die je vertrouwt kunt stellen.";
 }
 
 function createYesReply(previousBuddyMessage) {
@@ -1230,12 +1695,24 @@ function mentionsOverstimulated(text) {
   return /overprikkeld|prikkels|te veel geluid|veel geluid|drukte|alles komt binnen|kan niks hebben|snel geirriteerd|snel geprikkeld/.test(text);
 }
 
+function mentionsCraving(text) {
+  return /drang|trek|zin in|verlangen|craving|urge|wil gebruiken|bijna gebruiken|moeilijk om niet|kan het bijna niet laten/.test(text);
+}
+
+function mentionsRelapse(text) {
+  return /terugval|weer gebruikt|toch gebruikt|opnieuw gebruikt|weer gerookt|toch gerookt|weer gedronken|toch gedronken|weer gegokt|toch gegokt/.test(text);
+}
+
 function mentionsLowMotivation(text) {
   return /geen motivatie|weinig motivatie|geen zin|nergens zin|kom niet vooruit|niet vooruit|uitstellen|uitstelgedrag|lukt niet om te starten|kan niet beginnen/.test(text);
 }
 
 function mentionsAnger(text) {
   return /boos|kwaad|gefrustreerd|frustratie|irritatie|geirriteerd/.test(text);
+}
+
+function mentionsTalkingBarrier(text) {
+  return /praten lastig|moeilijk om te praten|moeilijk te zeggen|durf niet|schaam|schaamte|kan dit niet zeggen|weet niet (goed )?hoe ik (dit|het) moet zeggen|lastig om uit te leggen|bang voor oordeel|veroordeeld/.test(text);
 }
 
 function mentionsLowMood(text) {
@@ -1300,15 +1777,15 @@ function mentionsAdviceRequest(text) {
 }
 
 function createAdviceReply(todayEntry) {
-  if (todayEntry.sleepHours > 0 && todayEntry.sleepHours < 6) {
+  if (todayEntry?.sleepHours > 0 && todayEntry.sleepHours < 6) {
     return "Mijn rustige advies: maak je dag kleiner dan normaal. Wat is één ding dat echt moet?\n\nKleine stap: kies de lichtste versie van die taak.";
   }
 
-  if (todayEntry.focus === "slecht" || todayEntry.focus === "moeilijk") {
+  if (todayEntry?.focus === "slecht" || todayEntry?.focus === "moeilijk") {
     return "Mijn rustige advies: begin niet met alles, maar met de eerste zichtbare handeling. Wat is de kleinste start?\n\nKleine stap: zet 10 minuten aan en stop daarna bewust.";
   }
 
-  if (todayEntry.mood === "slecht") {
+  if (todayEntry?.mood === "slecht") {
     return "Mijn rustige advies: probeer vandaag niet je hele stemming te repareren. Wat zou het één procent zachter maken?\n\nKleine stap: doe iets simpels zonder prestatiedruk.";
   }
 
@@ -1334,7 +1811,7 @@ function mentionsBuddyScope(text) {
     mentionsOverstimulated(text) ||
     mentionsLowMotivation(text) ||
     mentionsAnger(text) ||
-    /voel|gevoel|gezond|gezondheid|lichaam|hoofd|energie|stemming|check-in|balans|rust|adem|beweeg|sport|schouder|nek|rug|buik|borst|arm|hand|been|voet|heup|knie|ziek|misselijk|duizelig|moeilijk|zwaar|advies|stap|helpen|hulp|aan de hand|mis met mij|mis met me/.test(text)
+    /voel|gevoel|gezond|gezondheid|lichaam|hoofd|energie|stemming|check-in|dagboek|trek|zin in|terugval|gestopt|stoppen|verslaving|balans|rust|adem|beweeg|sport|schouder|nek|rug|buik|borst|arm|hand|been|voet|heup|knie|ziek|misselijk|duizelig|moeilijk|zwaar|advies|stap|helpen|hulp|aan de hand|mis met mij|mis met me/.test(text)
   );
 }
 
@@ -1431,44 +1908,61 @@ function getDailyCoachMoment(entry, entries) {
   };
 }
 
-function getStartDayInsight(checkIn, dateKey) {
+function getHomePracticalReminder({ checkIn, journalEntry, quitTracker }) {
   const entry = checkIn ? normalizeCheckIn(checkIn) : null;
-
   if (entry?.sleepHours > 0 && entry.sleepHours < 6) {
     return {
-      lesson: "Na weinig slaap werkt een kleinere planning beter dan harder pushen.",
-      action: "Kies maximaal één belangrijk ding en maak de rest lichter.",
+      lesson: "Met weinig slaap is een kleinere planning vaak slimmer.",
+      action: "Kies één taak die echt moet en laat één andere taak wachten.",
     };
   }
 
-  if (entry && (entry.focus === "slecht" || entry.focus === "moeilijk")) {
+  if (entry?.focus === "slecht" || entry?.focus === "moeilijk") {
     return {
-      lesson: "Focus wordt makkelijker als je eerst bepaalt wat vandaag niet hoeft.",
-      action: "Schrijf één taak op die mag wachten.",
+      lesson: "Als focus laag is, helpt starten met minder keuze.",
+      action: "Leg één taak klaar en werk daar 10 minuten aan.",
     };
   }
 
   if (entry?.mood === "slecht") {
     return {
-      lesson: "Een lage stemming is informatie, geen bewijs dat de dag mislukt is.",
-      action: "Maak je volgende stap klein genoeg om zonder druk te doen.",
+      lesson: "Een lage stemming vraagt om een haalbare dag.",
+      action: "Doe eerst iets simpels dat je basis helpt: eten, douchen of lopen.",
     };
   }
 
   if (entry?.nutrition === "slecht") {
     return {
-      lesson: "Energie blijft stabieler als eten simpel en regelmatig genoeg is.",
-      action: "Kies één normale maaltijd of snack die weinig moeite kost.",
+      lesson: "Als voeding weinig steun gaf, begin met iets simpels.",
+      action: "Drink water en kies iets kleins dat je makkelijk kunt eten.",
     };
   }
 
-  return START_DAY_INSIGHTS[getStableDayIndex(dateKey, START_DAY_INSIGHTS.length)];
-}
+  if (journalEntry) {
+    return {
+      lesson: "Je hebt vandaag al iets vastgelegd. Gebruik dat als signaal.",
+      action: "Kies één concrete stap die past bij wat je hebt opgeschreven.",
+    };
+  }
 
-function getStableDayIndex(value, length) {
-  const text = String(value || "");
-  const total = [...text].reduce((sum, character) => sum + character.charCodeAt(0), 0);
-  return total % length;
+  if (quitTracker) {
+    return {
+      lesson: "Je voortgang wordt sterker als je moeilijke momenten bijhoudt.",
+      action: "Schrijf vandaag kort op wanneer het moeilijk wordt en wat je dan doet.",
+    };
+  }
+
+  if (entry) {
+    return {
+      lesson: "Je daggegevens zijn ingevuld. Maak je volgende stap concreet.",
+      action: "Kies één taak of één herstelmoment dat vandaag realistisch is.",
+    };
+  }
+
+  return {
+    lesson: "Je overzicht is nog leeg omdat er nog niets is ingevuld.",
+    action: "Begin met één dagboekregel of vul je daggegevens kort in.",
+  };
 }
 
 function getSimplePersonalInsight(entries) {
@@ -1876,6 +2370,87 @@ function loadTodayIntoForm() {
   });
 }
 
+function getJournalEntries() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(JOURNAL_STORAGE_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.map(normalizeJournalEntry).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function getJournalEntryByDate(date) {
+  return getJournalEntries().find((entry) => entry.date === date) || null;
+}
+
+function saveJournalEntry(input) {
+  const entries = getJournalEntries();
+  const existing = entries.find((entry) => entry.date === input.date);
+  const next = {
+    ...input,
+    craving: normalizeCraving(input.craving),
+    createdAt: existing?.createdAt || new Date().toISOString(),
+  };
+  const updated = [next, ...entries.filter((entry) => entry.date !== input.date)].sort((a, b) => b.date.localeCompare(a.date));
+  localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(updated));
+}
+
+function normalizeJournalEntry(entry) {
+  if (!entry || typeof entry !== "object") return null;
+
+  const date = typeof entry.date === "string" && isValidDateKey(entry.date) ? entry.date : "";
+  const text = typeof entry.text === "string" ? entry.text.trim() : "";
+  const createdAt = typeof entry.createdAt === "string" ? entry.createdAt : `${date}T00:00:00.000Z`;
+
+  if (!date || !text) return null;
+
+  return {
+    ...entry,
+    date,
+    text,
+    craving: normalizeCraving(entry.craving),
+    createdAt,
+    updatedAt: typeof entry.updatedAt === "string" ? entry.updatedAt : createdAt,
+  };
+}
+
+function getQuitTracker() {
+  try {
+    return normalizeQuitTracker(JSON.parse(localStorage.getItem(QUIT_TRACKER_STORAGE_KEY) || "null"));
+  } catch {
+    return null;
+  }
+}
+
+function saveQuitTracker(input) {
+  const existing = getQuitTracker();
+  const next = normalizeQuitTracker({
+    ...input,
+    createdAt: existing?.createdAt || new Date().toISOString(),
+  });
+
+  if (!next) return;
+
+  localStorage.setItem(QUIT_TRACKER_STORAGE_KEY, JSON.stringify(next));
+}
+
+function normalizeQuitTracker(value) {
+  if (!value || typeof value !== "object") return null;
+
+  const label = typeof value.label === "string" ? value.label.trim() : "";
+  const startDate = typeof value.startDate === "string" && isValidDateKey(value.startDate) ? value.startDate : "";
+  const createdAt = typeof value.createdAt === "string" ? value.createdAt : new Date().toISOString();
+
+  if (!label || !startDate || startDate > today) return null;
+
+  return {
+    label: label.slice(0, 40),
+    startDate,
+    createdAt,
+    updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : createdAt,
+  };
+}
+
 function getCheckIns() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
@@ -1941,8 +2516,47 @@ function formatDate(dateKey) {
   }).format(new Date(`${dateKey}T12:00:00`));
 }
 
+function formatShortDate(dateKey) {
+  return new Intl.DateTimeFormat("nl-NL", {
+    day: "numeric",
+    month: "short",
+  }).format(new Date(`${dateKey}T12:00:00`));
+}
+
+function isValidDateKey(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return false;
+
+  const date = new Date(`${value}T12:00:00`);
+  return !Number.isNaN(date.getTime()) && toDateKey(date) === value;
+}
+
+function shiftDateKey(dateKey, amount) {
+  const baseDate = isValidDateKey(dateKey) ? new Date(`${dateKey}T12:00:00`) : new Date(`${today}T12:00:00`);
+  baseDate.setDate(baseDate.getDate() + amount);
+  return toDateKey(baseDate);
+}
+
+function calculateDaysSince(startDateKey, endDateKey = today) {
+  if (!isValidDateKey(startDateKey) || !isValidDateKey(endDateKey)) return 0;
+
+  const startDate = new Date(`${startDateKey}T12:00:00`);
+  const endDate = new Date(`${endDateKey}T12:00:00`);
+  const diff = Math.floor((endDate - startDate) / 86400000);
+  return Math.max(0, diff);
+}
+
+function formatStoppedDuration(days) {
+  const value = Math.max(0, Number(days) || 0);
+  if (value === 0) return "Vandaag gestart";
+  return formatDayCount(value);
+}
+
 function normalizeNutrition(value) {
   return value === "goed" || value === "slecht" ? value : "oke";
+}
+
+function normalizeCraving(value) {
+  return ["geen", "laag", "middel", "hoog"].includes(value) ? value : "geen";
 }
 
 function normalizeCheckIn(entry) {
@@ -2033,9 +2647,18 @@ function getMoodLabel(mood) {
 function getNutritionLabel(nutrition) {
   return {
     slecht: "Slecht",
-    oke: "Oke",
+    oke: "Oké",
     goed: "Goed",
   }[normalizeNutrition(nutrition)];
+}
+
+function getCravingLabel(craving) {
+  return {
+    geen: "Geen",
+    laag: "Laag",
+    middel: "Middel",
+    hoog: "Hoog",
+  }[normalizeCraving(craving)];
 }
 
 function getFocusLabelFromScore(score) {
@@ -2075,7 +2698,7 @@ function clampScore(value) {
 }
 
 function escapeHtml(value) {
-  return value.replace(/[&<>"']/g, (character) => {
+  return String(value || "").replace(/[&<>"']/g, (character) => {
     return {
       "&": "&amp;",
       "<": "&lt;",
@@ -2084,4 +2707,8 @@ function escapeHtml(value) {
       "'": "&#039;",
     }[character];
   });
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value);
 }

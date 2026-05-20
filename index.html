@@ -12,14 +12,14 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="public/app-icon.png" />
     <link rel="apple-touch-icon" href="public/app-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=pitch-polish-20260518" />
+    <link rel="stylesheet" href="styles.css?v=diary-browse-days-20260520" />
   </head>
   <body>
     <main class="app-shell">
       <header class="app-topbar" data-build="scroll-away-topbar-20260517-1152" aria-live="polite">
         <div class="app-topbar-copy">
           <p class="eyebrow" id="topbar-eyebrow">Feelbetter</p>
-          <h1 id="topbar-title">Hoe voel ik mij vandaag?</h1>
+          <h1 id="topbar-title">Overzicht</h1>
           <p class="date-label" id="topbar-date"></p>
         </div>
         <button class="settings-icon-button" type="button" data-screen="settings" aria-label="Instellingen">
@@ -29,6 +29,10 @@
 
       <section class="screen active" id="screen-today">
         <div id="today-content"></div>
+      </section>
+
+      <section class="screen" id="screen-journal">
+        <div id="journal-content"></div>
       </section>
 
       <section class="screen" id="screen-checkin">
@@ -77,7 +81,7 @@
             <p class="error-message" id="form-error" role="alert"></p>
           </div>
 
-          <button class="primary-button" type="submit">Opslaan en analyse bekijken</button>
+          <button class="primary-button" type="submit">Opslaan</button>
         </form>
       </section>
 
@@ -109,17 +113,28 @@
               <input id="dark-mode-toggle" type="checkbox" role="switch" />
             </label>
           </div>
+
+          <div class="card settings-card">
+            <div>
+              <h2>Lokale data</h2>
+              <p>Wis dagboek, daggegevens en voortgang op dit apparaat.</p>
+            </div>
+
+            <button class="secondary-button danger-button" type="button" onclick="clearLocalAppData()">
+              Wis lokale data
+            </button>
+          </div>
         </div>
       </section>
     </main>
 
     <nav class="bottom-nav" aria-label="Navigatie">
-      <button type="button" data-screen="today" class="active">Vandaag</button>
-      <button type="button" data-screen="checkin">Check-in</button>
-      <button type="button" data-screen="week">Progressie</button>
+      <button type="button" data-screen="today" class="active">Home</button>
+      <button type="button" data-screen="journal">Dagboek</button>
+      <button type="button" data-screen="week">Voortgang</button>
       <button type="button" data-screen="buddy">Buddy</button>
     </nav>
 
-    <script src="app.js?v=buddy-duration-fix-20260519"></script>
+    <script src="app.js?v=diary-browse-days-20260520"></script>
   </body>
 </html>

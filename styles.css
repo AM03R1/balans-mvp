@@ -91,7 +91,7 @@ button {
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
   margin: 0 auto;
-  padding: 0 1rem calc(6.5rem + env(safe-area-inset-bottom));
+  padding: 0 1rem calc(7.25rem + env(safe-area-inset-bottom));
   transform: translateX(-50%);
 }
 
@@ -289,6 +289,16 @@ p {
   transform: translateY(-1px);
 }
 
+.danger-button {
+  border-color: rgba(169, 71, 53, 0.35);
+  color: var(--danger-text);
+}
+
+.danger-button:hover {
+  border-color: var(--danger-text);
+  color: var(--danger-text);
+}
+
 .form-card {
   display: grid;
   gap: 14px;
@@ -334,6 +344,8 @@ legend {
 
 input[type="number"],
 input[type="text"],
+input[type="date"],
+select,
 textarea {
   width: 100%;
   border: 1px solid var(--line);
@@ -358,6 +370,13 @@ input[type="text"] {
   font-weight: 850;
 }
 
+input[type="date"],
+select {
+  min-height: 42px;
+  padding: 10px 12px;
+  font-weight: 850;
+}
+
 textarea {
   resize: none;
   padding: 10px 12px;
@@ -370,6 +389,7 @@ input[type="range"] {
 }
 
 input:focus,
+select:focus,
 textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px rgba(102, 3, 252, 0.13);
@@ -456,6 +476,235 @@ textarea:focus {
   gap: 14px;
 }
 
+.journal-card,
+.quit-card {
+  display: grid;
+  gap: 14px;
+}
+
+.diary-card {
+  border-color: rgba(102, 3, 252, 0.14);
+  background:
+    linear-gradient(90deg, rgba(102, 3, 252, 0.08), transparent 42px),
+    var(--surface);
+}
+
+.diary-nav {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 52px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 10px;
+}
+
+.diary-nav strong {
+  display: block;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 950;
+  text-transform: capitalize;
+}
+
+.diary-nav-button {
+  min-width: 52px;
+  min-height: 48px;
+  padding: 0;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.diary-nav-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+  transform: none;
+}
+
+.diary-header {
+  display: grid;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+
+.diary-date {
+  width: fit-content;
+  border: 1px solid rgba(102, 3, 252, 0.14);
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  font-weight: 850;
+  text-transform: capitalize;
+}
+
+.diary-field {
+  gap: 9px;
+}
+
+.diary-page,
+.diary-textarea {
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 31px,
+      rgba(102, 3, 252, 0.13) 31px,
+      rgba(102, 3, 252, 0.13) 32px
+    ),
+    var(--surface-strong);
+  line-height: 32px;
+}
+
+.diary-textarea {
+  min-height: 218px;
+  padding: 12px 14px;
+}
+
+.quit-calendar-card {
+  display: grid;
+  gap: 14px;
+}
+
+.quit-calendar {
+  display: grid;
+  gap: 10px;
+}
+
+.quit-calendar-header {
+  color: var(--text);
+  font-size: 0.96rem;
+  font-weight: 900;
+  text-transform: capitalize;
+}
+
+.quit-calendar-weekdays,
+.quit-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.quit-calendar-weekdays span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.quit-calendar-day {
+  display: inline-flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.quit-calendar-day.checked {
+  border-color: rgba(102, 3, 252, 0.18);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+.quit-calendar-day.today {
+  box-shadow: 0 0 0 2px rgba(102, 3, 252, 0.22);
+}
+
+.quit-calendar-day.future,
+.quit-calendar-day.before-start {
+  opacity: 0.45;
+}
+
+.quit-calendar-day.blank {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  opacity: 1;
+}
+
+.quit-calendar-day strong {
+  position: absolute;
+  right: 4px;
+  bottom: 2px;
+  color: var(--primary);
+  font-size: 0.62rem;
+  line-height: 1;
+}
+
+.dashboard-card {
+  display: grid;
+  gap: 14px;
+}
+
+.dashboard-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.journal-entry-text {
+  margin: 0;
+  border-radius: 8px;
+  background: var(--surface-strong);
+  padding: 12px;
+  color: var(--text);
+  white-space: pre-line;
+}
+
+.journal-entry-text.diary-page {
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 31px,
+      rgba(102, 3, 252, 0.13) 31px,
+      rgba(102, 3, 252, 0.13) 32px
+    ),
+    var(--surface-strong);
+  min-height: 154px;
+}
+
+.journal-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.journal-list {
+  display: grid;
+  gap: 10px;
+}
+
+.journal-list-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  padding: 12px;
+}
+
+.journal-list-item strong {
+  display: block;
+  color: var(--primary-dark);
+  font-size: 0.92rem;
+}
+
+.journal-list-item p {
+  margin: 6px 0;
+  color: var(--text);
+}
+
+.journal-list-item span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .buddy-header {
   display: flex;
   align-items: flex-start;
@@ -477,6 +726,12 @@ textarea:focus {
   color: var(--danger-text);
   font-size: 0.86rem;
   font-weight: 750;
+}
+
+.buddy-context-note {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
 }
 
 .buddy-log {
@@ -663,7 +918,7 @@ textarea:focus {
   gap: 8px;
   width: min(100%, 28rem);
   margin: 0 auto;
-  padding: 10px 1rem calc(12px + env(safe-area-inset-bottom));
+  padding: 12px 1rem calc(14px + env(safe-area-inset-bottom));
   background: rgba(255, 255, 255, 0.92);
   border-top: 1px solid var(--line);
   backdrop-filter: blur(14px);
@@ -703,12 +958,12 @@ body.dark-mode .app-topbar::after {
 }
 
 .bottom-nav button {
-  min-height: 42px;
+  min-height: 52px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   font-weight: 850;
 }
 
