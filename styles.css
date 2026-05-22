@@ -129,6 +129,7 @@ button {
 
 .screen.active {
   display: block;
+  animation: screen-fade-in 180ms ease;
 }
 
 .page-header {
@@ -226,6 +227,118 @@ p {
   border-radius: 8px;
   background: var(--primary-soft);
   padding: 11px 12px;
+}
+
+.home-compass-card {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+
+.home-compass-card .analysis-text {
+  margin: 8px 0 0;
+  max-width: 21rem;
+}
+
+.home-compass-title {
+  max-width: 18rem;
+  font-size: 1.48rem;
+  line-height: 1.08;
+}
+
+.home-compass-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.home-compass-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1.4rem;
+  gap: 5px 12px;
+  align-items: center;
+  width: 100%;
+  min-height: 80px;
+  border: 1px solid rgba(102, 3, 252, 0.11);
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--surface), var(--surface-strong));
+  padding: 13px 14px;
+  color: var(--text);
+  text-align: left;
+}
+
+.home-compass-item::after {
+  content: "›";
+  grid-column: 2;
+  grid-row: 1 / 4;
+  justify-self: end;
+  color: var(--primary);
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.home-compass-item span {
+  grid-column: 1;
+  color: var(--primary);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.home-compass-item strong {
+  grid-column: 1;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 950;
+  line-height: 1.18;
+}
+
+.home-compass-item small {
+  grid-column: 1;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.home-compass-next {
+  border: 1px solid rgba(102, 3, 252, 0.1);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(102, 3, 252, 0.08), rgba(140, 92, 255, 0.03)),
+    var(--surface);
+  padding: 13px 14px;
+}
+
+.home-compass-next strong {
+  color: var(--primary-dark);
+  font-size: 0.92rem;
+  font-weight: 950;
+}
+
+.home-compass-next p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.48;
+}
+
+.home-quote-card p {
+  color: var(--text);
+  font-size: 0.96rem;
+  font-weight: 800;
+}
+
+.home-quote-card span {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.home-quote-card span::before {
+  content: "- ";
 }
 
 .metric span {
@@ -471,6 +584,10 @@ textarea:focus {
   color: var(--muted);
 }
 
+.quiet-tip {
+  background: var(--surface-strong);
+}
+
 .buddy-card {
   display: grid;
   gap: 14px;
@@ -562,6 +679,10 @@ textarea:focus {
 .diary-textarea {
   min-height: 218px;
   padding: 12px 14px;
+}
+
+.diary-takeaway {
+  margin-top: -2px;
 }
 
 .quit-calendar-card {
@@ -734,6 +855,25 @@ textarea:focus {
   font-size: 0.86rem;
 }
 
+.buddy-empty {
+  border: 1px dashed rgba(102, 3, 252, 0.18);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  padding: 12px;
+}
+
+.buddy-empty strong {
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 950;
+}
+
+.buddy-empty p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
 .buddy-log {
   display: grid;
   max-height: 360px;
@@ -836,6 +976,30 @@ textarea:focus {
 .settings-card p {
   margin: 6px 0 0;
   color: var(--muted);
+}
+
+.tester-card {
+  border-color: rgba(102, 3, 252, 0.14);
+  background:
+    linear-gradient(135deg, rgba(102, 3, 252, 0.05), rgba(140, 92, 255, 0.02)),
+    var(--surface);
+}
+
+.feedback-list {
+  display: grid;
+  gap: 8px;
+}
+
+.feedback-list p {
+  margin: 0;
+  border: 1px solid rgba(102, 3, 252, 0.1);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.4;
 }
 
 .setting-row {
@@ -982,6 +1146,31 @@ body.dark-mode .app-topbar::after {
 
 .bottom-nav button.active span {
   color: #ffffff;
+}
+
+@keyframes screen-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen.active {
+    animation: none;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .setting-row input,
+  .setting-row input::before {
+    transition: none;
+  }
 }
 
 @media (max-width: 360px) {

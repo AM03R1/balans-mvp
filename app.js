@@ -5,7 +5,7 @@ const QUIT_TRACKER_STORAGE_KEY = "balans-mvp-quit-tracker";
 const BUDDY_CRISIS_REPLY =
   "Het spijt me dat je je zo voelt. Je hoeft dit niet alleen te dragen. Neem nu direct contact op met iemand die je vertrouwt of bel 112 als je in direct gevaar bent. In Nederland kun je ook 113 Zelfmoordpreventie bereiken via 113 of 0800-0113.";
 const BUDDY_SCOPE_REPLY =
-  "Daar kan ik je niet goed mee helpen. Balans Buddy is er alleen om kort mee te denken over hoe je je voelt, je dagboek, je voortgang, gezondheid, slaap, focus, stemming, voeding of een kleine praktische stap.\n\nWil je vertellen wat dit met je doet, of hoe je je nu voelt?";
+  "Daar kan ik je niet goed mee helpen. Feelbetter Buddy is er alleen om kort mee te denken over hoe je je voelt, je dagboek, je voortgang, gezondheid, slaap, focus, stemming, voeding of een kleine praktische stap.\n\nWil je vertellen wat dit met je doet, of hoe je je nu voelt?";
 const BUDDY_UNCLEAR_REPLY =
   "Ik begrijp niet helemaal wat je bedoelt. Wil je het opnieuw in gewone woorden zeggen?";
 const BUDDY_GREETING_REPLY =
@@ -15,9 +15,67 @@ const BUDDY_CAPABILITY_REPLY =
 const BUDDY_THANKS_REPLY =
   "Graag gedaan. Wat wil je nu vooral vasthouden uit dit gesprek?";
 const BUDDY_SAFETY_MESSAGE =
-  "Balans Buddy is bedoeld om je te helpen reflecteren, maar is geen vervanging voor professionele hulp. Als je jezelf of iemand anders iets wilt aandoen, neem direct contact op met 112 of iemand die je vertrouwt.";
+  "Feelbetter Buddy is bedoeld om je te helpen reflecteren, maar is geen vervanging voor professionele hulp. Als je jezelf of iemand anders iets wilt aandoen, neem direct contact op met 112 of iemand die je vertrouwt.";
 const BUDDY_LANGUAGE_REPLY =
   "Ik snap dat je misschien boos of gefrustreerd bent, maar ziektes als scheldwoord gebruiken is niet oké. Wil je het opnieuw zeggen zonder scheldwoorden? Dan kan ik beter met je meedenken.";
+const DAILY_QUOTES = [
+  {
+    text: "Je hebt macht over je geest, niet over gebeurtenissen buiten je.",
+    author: "Marcus Aurelius",
+  },
+  {
+    text: "Een reis van duizend mijl begint met één stap.",
+    author: "Lao Tzu",
+  },
+  {
+    text: "We lijden vaker in gedachten dan in werkelijkheid.",
+    author: "Seneca",
+  },
+  {
+    text: "Niet wat er gebeurt, maar hoe je erop reageert, doet ertoe.",
+    author: "Epictetus",
+  },
+  {
+    text: "Het volmaakte is de vijand van het goede.",
+    author: "Voltaire",
+  },
+  {
+    text: "Doe wat je kunt, met wat je hebt, waar je bent.",
+    author: "Theodore Roosevelt",
+  },
+  {
+    text: "Handel alsof wat je doet verschil maakt. Dat doet het.",
+    author: "William James",
+  },
+  {
+    text: "Zonder strijd is er geen vooruitgang.",
+    author: "Frederick Douglass",
+  },
+  {
+    text: "Niets in het leven hoeft gevreesd te worden, het moet alleen begrepen worden.",
+    author: "Marie Curie",
+  },
+  {
+    text: "Maak elke dag af en wees er klaar mee.",
+    author: "Ralph Waldo Emerson",
+  },
+  {
+    text: "Het niet onderzochte leven is het niet waard geleefd te worden.",
+    author: "Socrates",
+  },
+  {
+    text: "Kleine daden die gedaan zijn, zijn beter dan grote daden die gepland zijn.",
+    author: "Peter Marshall",
+  },
+  {
+    text: "Onze grootste zwakte ligt in opgeven.",
+    author: "Thomas Edison",
+  },
+  {
+    text: "Verloren tijd wordt nooit teruggevonden.",
+    author: "Benjamin Franklin",
+  },
+];
 const nutritionButtons = [...document.querySelectorAll("[data-nutrition]")];
 const focusButtons = [...document.querySelectorAll("[data-focus]")];
 const moodButtons = [...document.querySelectorAll("[data-mood]")];
@@ -52,13 +110,13 @@ const topbar = {
 };
 const appShell = document.querySelector(".app-shell");
 const screenHeadings = {
-  today: { eyebrow: "Feelbetter", title: "Overzicht", date: formatDate(today) },
-  journal: { eyebrow: "Dagboek", title: "Mijn dagboek", date: formatDate(today) },
+  today: { eyebrow: "Feelbetter", title: "Vandaag", date: formatDate(today) },
+  journal: { eyebrow: "Dagboek", title: "Avondreflectie", date: formatDate(today) },
   checkin: { eyebrow: "Daggegevens", title: "Gezondheid kort vastleggen", date: "" },
   result: { eyebrow: "Resultaat", title: "Je analyse", date: formatDate(today) },
   week: { eyebrow: "Voortgang", title: "Afkick voortgang", date: "" },
-  buddy: { eyebrow: "Balans Buddy", title: "Wat wil je kwijt?", date: formatDate(today) },
-  settings: { eyebrow: "Instellingen", title: "Maak Balans van jou", date: "" },
+  buddy: { eyebrow: "Feelbetter Buddy", title: "Wat wil je kwijt?", date: formatDate(today) },
+  settings: { eyebrow: "Instellingen", title: "Maak Feelbetter van jou", date: "" },
 };
 
 setText("#today-date", formatDate(today));
@@ -212,44 +270,30 @@ function setTheme(theme) {
 }
 
 function renderToday() {
-  const journalEntry = getJournalEntryByDate(today);
   const checkIn = getCheckInByDate(today);
+  const journalEntry = getJournalEntryByDate(today);
   const quitTracker = getQuitTracker();
-  const journalStats = calculateJournalStats(getJournalEntries());
-  const healthStats = calculateHealthDashboardStats(getCheckIns());
-  const dailyLesson = getHomePracticalReminder({ checkIn, journalEntry, quitTracker });
-  const daysStopped = quitTracker ? calculateDaysSince(quitTracker.startDate) : null;
+  const compass = getHomeCompass({ checkIn, journalEntry, quitTracker });
+  const quote = getDailyQuote(today);
   const target = document.querySelector("#today-content");
 
   target.innerHTML = `
     <div class="stack">
-      ${startDayInsightCard(dailyLesson)}
-      <div class="card dashboard-card">
-        <p class="analysis-label">Overzicht</p>
-        <h2 class="analysis-title">Je stand van vandaag</h2>
-        <div class="metric-grid dashboard-grid">
-          ${metric("Dagboek", journalEntry ? "Vandaag" : "Nog niet")}
-          ${metric("Deze week", `${journalStats.entriesThisWeek}/7`)}
-          ${metric("Doel", quitTracker ? escapeHtml(quitTracker.label) : "Niet ingesteld")}
+      <div class="card home-compass-card">
+        <div>
+          <p class="analysis-label">Dagkompas</p>
+          <h2 class="analysis-title home-compass-title">Begrijp je dag in één minuut.</h2>
+          <p class="analysis-text">Slaap, voeding, reflectie en volhouden laten samen zien wat invloed heeft op hoe je je voelt.</p>
         </div>
-      </div>
-      <div class="card dashboard-card">
-        <p class="analysis-label">Gezondheid</p>
-        <h2 class="analysis-title">${healthStats.title}</h2>
-        <div class="metric-grid dashboard-grid">
-          ${metric("Slaap", healthStats.sleep)}
-          ${metric("Voeding", healthStats.nutrition)}
-          ${metric("Balans", healthStats.balance)}
+        <div class="home-compass-next home-quote-card">
+          <strong>Quote van vandaag</strong>
+          <p>“${escapeHtml(quote.text)}”</p>
+          <span>${escapeHtml(quote.author)}</span>
         </div>
-        <p class="analysis-text">${healthStats.description}</p>
-        ${healthStats.hasData ? "" : `<button class="secondary-button" type="button" onclick="showScreen('checkin')">Daggegevens invullen</button>`}
-      </div>
-      <div class="card dashboard-card">
-        <p class="analysis-label">Afkick voortgang</p>
-        <h2 class="analysis-title">${quitTracker ? getDashboardProgressTitle(quitTracker, daysStopped) : "Nog geen doel ingesteld"}</h2>
-        <div class="week-grid">
-          ${metric("Gestopt", quitTracker ? formatStoppedDuration(daysStopped) : "-")}
-          ${metric("Sinds", quitTracker ? formatShortDate(quitTracker.startDate) : "-")}
+        <div class="home-compass-grid">
+          ${homeCompassItem(compass.body)}
+          ${homeCompassItem(compass.mind)}
+          ${homeCompassItem(compass.progress)}
         </div>
       </div>
     </div>
@@ -432,6 +476,105 @@ function metric(label, value) {
   return `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`;
 }
 
+function homeCompassItem(item) {
+  return `
+    <button class="home-compass-item" type="button" onclick="${item.action}">
+      <span>${item.label}</span>
+      <strong>${item.title}</strong>
+      <small>${item.text}</small>
+    </button>
+  `;
+}
+
+function getHomeCompass({ checkIn, journalEntry, quitTracker }) {
+  return {
+    body: getBodyCompassItem(checkIn),
+    mind: getMindCompassItem(journalEntry),
+    progress: getProgressCompassItem(quitTracker),
+  };
+}
+
+function getDailyQuote(dateKey = today) {
+  const safeDateKey = isValidDateKey(dateKey) ? dateKey : today;
+  const date = new Date(`${safeDateKey}T12:00:00`);
+  const yearStart = new Date(date.getFullYear(), 0, 0, 12);
+  const dayOfYear = Math.max(1, Math.floor((date - yearStart) / 86400000));
+
+  return DAILY_QUOTES[(dayOfYear - 1) % DAILY_QUOTES.length];
+}
+
+function getBodyCompassItem(checkIn) {
+  if (!checkIn) {
+    return {
+      label: "Lichaam",
+      title: "Slaap en voeding",
+      text: "Nog niet ingevuld",
+      action: "showScreen('checkin')",
+    };
+  }
+
+  if (checkIn.sleepHours > 0 && checkIn.sleepHours < 6) {
+    return {
+      label: "Lichaam",
+      title: "Slaap vraagt aandacht",
+      text: `${checkIn.sleepHours} uur slaap`,
+      action: "showScreen('checkin')",
+    };
+  }
+
+  if (checkIn.nutrition === "slecht") {
+    return {
+      label: "Lichaam",
+      title: "Voeding vraagt aandacht",
+      text: "Houd het simpel vandaag",
+      action: "showScreen('checkin')",
+    };
+  }
+
+  return {
+    label: "Lichaam",
+    title: "Slaap en voeding",
+    text: `${checkIn.sleepHours} uur slaap · voeding ${getNutritionLabel(checkIn.nutrition).toLowerCase()}`,
+    action: "showScreen('checkin')",
+  };
+}
+
+function getMindCompassItem(journalEntry) {
+  if (journalEntry) {
+    return {
+      label: "Hoofd",
+      title: "Avondreflectie",
+      text: "Ingevuld",
+      action: "showScreen('journal')",
+    };
+  }
+
+  return {
+    label: "Hoofd",
+    title: "Avondreflectie",
+    text: "Nog open voor vanavond",
+    action: "showScreen('journal')",
+  };
+}
+
+function getProgressCompassItem(quitTracker) {
+  if (!quitTracker) {
+    return {
+      label: "Volhouden",
+      title: "Gestopt met",
+      text: "Geen doel ingesteld",
+      action: "showScreen('week')",
+    };
+  }
+
+  return {
+    label: "Volhouden",
+    title: "Gestopt met",
+    text: `${escapeHtml(quitTracker.label)} · ${formatStoppedDuration(calculateDaysSince(quitTracker.startDate))}`,
+    action: "showScreen('week')",
+  };
+}
+
 function calculateJournalStats(entries) {
   const weeklyEntries = entries.filter((entry) => lastSevenDateKeys().includes(entry.date));
 
@@ -498,12 +641,13 @@ function journalCard(entry, dateKey = selectedJournalDate) {
       <div class="card journal-card diary-card">
         <div class="diary-header">
           <p class="analysis-label">Dagboek</p>
-          <h2 class="analysis-title">Mijn dag</h2>
+          <h2 class="analysis-title">Reflectie op mijn dag</h2>
           <span class="diary-date">${formatDate(entry.date)}</span>
         </div>
         <p class="journal-entry-text diary-page">${escapeHtml(entry.text)}</p>
+        ${journalReflectionCue(entry)}
         <div class="actions">
-          <button class="primary-button" type="button" onclick="openJournalEditor()">Wijzig dagboek</button>
+          <button class="primary-button" type="button" onclick="openJournalEditor()">Wijzig reflectie</button>
           <button class="secondary-button" type="button" onclick="showScreen('buddy')">Praat hierover</button>
         </div>
       </div>
@@ -514,17 +658,62 @@ function journalCard(entry, dateKey = selectedJournalDate) {
     <form class="card journal-card diary-card" id="journal-form">
       <div class="diary-header">
         <p class="analysis-label">Dagboek</p>
-        <h2 class="analysis-title">Mijn dag</h2>
+        <h2 class="analysis-title">Reflectie op mijn dag</h2>
         <span class="diary-date">${formatDate(dateKey)}</span>
       </div>
       <label class="field diary-field">
-        <span>Schrijfmoment</span>
-        <textarea class="diary-textarea" id="journal-text" rows="7" maxlength="700" placeholder="${entry ? "Werk je dagboek bij..." : "Nog niets geschreven op deze dag..."}">${entry ? escapeHtml(entry.text) : ""}</textarea>
+        <span>Avondreflectie</span>
+        <textarea class="diary-textarea" id="journal-text" rows="7" maxlength="700" placeholder="${entry ? "Werk je reflectie bij..." : "Wat kostte energie? Wat gaf steun? Wat neem je mee naar morgen?"}">${entry ? escapeHtml(entry.text) : ""}</textarea>
       </label>
       <p class="error-message" id="journal-error" role="alert"></p>
-      <button class="primary-button" type="submit">${entry ? "Dagboek opslaan" : "Opschrijven"}</button>
+      <button class="primary-button" type="submit">Reflectie opslaan</button>
     </form>
   `;
+}
+
+function journalReflectionCue(entry) {
+  const takeaway = createJournalReflectionTakeaway(entry?.text || "");
+
+  return `
+    <div class="tip-box diary-takeaway">
+      <strong>Meenemen</strong>
+      <p>${takeaway}</p>
+    </div>
+  `;
+}
+
+function createJournalReflectionTakeaway(text) {
+  const value = normalizeBuddyText(text);
+
+  if (mentionsSleep(value)) {
+    return "Slaap lijkt vandaag mee te spelen. Maak morgen één keuze die je avond rustiger maakt.";
+  }
+
+  if (mentionsFood(value)) {
+    return "Voeding of energie lijkt mee te spelen. Houd morgen één simpele eet- of drinkkeuze makkelijk beschikbaar.";
+  }
+
+  if (mentionsPressure(value) || mentionsRumination(value)) {
+    return "Je hoofd lijkt vol. Kies morgen één duidelijke prioriteit en laat één ding bewust wachten.";
+  }
+
+  if (mentionsPhysicalPain(value) || mentionsPhysicalSymptom(value)) {
+    return "Je lichaam geeft een signaal. Forceer morgen minder en let op wat de klacht verergert of verlicht.";
+  }
+
+  if (mentionsCraving(value) || mentionsRelapse(value)) {
+    return "Dit is bruikbare informatie over je trigger. Bedenk alvast wat je doet bij het eerste moeilijke moment.";
+  }
+
+  if (mentionsLowMood(value) || mentionsSelfCriticism(value)) {
+    return "Je stemming vroeg aandacht. Maak morgen klein genoeg om haalbaar te blijven.";
+  }
+
+  if (/trots|gelukt|blij|fijn|goed|rust|opgelucht|tevreden/.test(value)) {
+    return "Er zat iets in deze dag dat werkte. Probeer morgen één onderdeel daarvan opnieuw te doen.";
+  }
+
+  return "Kies één ding uit deze dag dat je morgen wilt herhalen, veranderen of loslaten.";
 }
 
 function quitTrackerCard(tracker, options = {}) {
@@ -581,12 +770,18 @@ function quitTrackerCard(tracker, options = {}) {
 }
 
 function quitTrackerSummaryCard(tracker) {
+  const daysStopped = calculateDaysSince(tracker.startDate);
+
   return `
     <div class="card quit-card">
       <div>
         <p class="analysis-label">Verslaving</p>
         <h2 class="analysis-title">${escapeHtml(tracker.label)}</h2>
-        <p class="analysis-text">Sinds ${formatDate(tracker.startDate)}</p>
+        <p class="analysis-text">Sinds ${formatDate(tracker.startDate)} · ${formatStoppedDuration(daysStopped)}</p>
+      </div>
+      <div class="tip-box quiet-tip">
+        <strong>Vandaag volhouden</strong>
+        <p>Kies één moment waarop je afstand houdt van je oude gewoonte.</p>
       </div>
     </div>
   `;
@@ -744,7 +939,7 @@ function buddyChatCard(checkIn) {
     return `
       <div class="card buddy-card">
         <div>
-          <p class="analysis-label">Balans Buddy</p>
+          <p class="analysis-label">Feelbetter Buddy</p>
           <h2 class="analysis-title">${checkIn ? "Even napraten over je check-in?" : "Wat wil je kwijt?"}</h2>
           <p class="analysis-text">${getBuddyIntroText(checkIn)}</p>
         </div>
@@ -757,7 +952,7 @@ function buddyChatCard(checkIn) {
     <div class="card buddy-card">
       <div class="buddy-header">
         <div>
-          <p class="analysis-label">Balans Buddy</p>
+          <p class="analysis-label">Feelbetter Buddy</p>
           <h2 class="analysis-title">Wat wil je kwijt?</h2>
         </div>
         <button class="secondary-button buddy-close" type="button" onclick="closeBuddyChat()">Sluiten</button>
@@ -774,12 +969,15 @@ function buddyChatCard(checkIn) {
                 })
                 .join("")}
             </div>`
-          : ""
+          : `<div class="buddy-empty">
+              <strong>Begin met één gewone zin.</strong>
+              <p>Bijvoorbeeld: "Ik voel me gespannen", "Ik heb pijn in mijn schouder" of "Ik heb trek om weer te gebruiken".</p>
+            </div>`
       }
       <form class="buddy-input" onsubmit="sendBuddyMessage(event)">
         <label class="field">
-          <span class="visually-hidden">Bericht aan Balans Buddy</span>
-          <textarea data-buddy-message rows="3" maxlength="420" placeholder="Typ wat je kwijt wil..." onkeydown="handleBuddyMessageKeyDown(event)"></textarea>
+          <span class="visually-hidden">Bericht aan Feelbetter Buddy</span>
+          <textarea data-buddy-message rows="3" maxlength="420" placeholder="Schrijf kort wat je voelt of merkt..." onkeydown="handleBuddyMessageKeyDown(event)"></textarea>
         </label>
         <button class="primary-button" type="submit">Verstuur</button>
       </form>
@@ -939,10 +1137,12 @@ function sendBuddyMessage(event) {
 
   if (!text) return;
 
+  const reply = generateBuddyReply(text, checkIn, buddyMessages);
+
   buddyMessages = [
     ...buddyMessages,
     { role: "user", text },
-    { role: "buddy", text: generateBuddyReply(text, checkIn, buddyMessages) },
+    { role: "buddy", text: keepBuddyConversationMoving(reply, text, checkIn, buddyMessages) },
   ];
   renderResult();
   renderBuddy();
@@ -1023,6 +1223,14 @@ function generateBuddyReply(message, todayEntry, history = []) {
     return "Ik heb zelf geen gevoelens, maar ik ben er om rustig met jou mee te denken. Hoe is het nu met jou?";
   }
 
+  if (detectDiagnosisRequest(text)) {
+    return createDiagnosisBoundaryReply(text);
+  }
+
+  if (detectHealthInfoQuestion(text)) {
+    return createHealthInfoReply(text);
+  }
+
   if (mentionsMedicalDiseaseContext(text)) {
     return createMedicalDiseaseReply(text);
   }
@@ -1061,6 +1269,18 @@ function generateBuddyReply(message, todayEntry, history = []) {
 
   if (detectTiredMessage(message)) {
     return createTiredReply(todayEntry);
+  }
+
+  if (mentionsPanic(text)) {
+    return createPanicReply(text);
+  }
+
+  if (mentionsGrief(text)) {
+    return createGriefReply(text);
+  }
+
+  if (mentionsLoneliness(text)) {
+    return createLonelinessReply(text);
   }
 
   if (mentionsRelationshipStress(text)) {
@@ -1190,12 +1410,155 @@ function generateBuddyReply(message, todayEntry, history = []) {
   return "Dank je dat je dit opschrijft. Ik wil eerst goed begrijpen wat je bedoelt: wil je vooral dat ik luister, help ordenen, of meedenk over een stap?";
 }
 
+function keepBuddyConversationMoving(reply, userMessage, todayEntry, history = []) {
+  if (isProtectedBuddyReply(reply)) return reply;
+
+  const text = normalizeBuddyText(userMessage);
+  const topic = inferConversationTopic(text, history) || inferCurrentConversationTopic(text) || "general";
+
+  if (hasSimilarBuddyReply(reply, history)) {
+    return createTopicContinuationReply(topic, text, todayEntry, history);
+  }
+
+  if (shouldDeepenConversation(topic, text, history)) {
+    const continuation = createTopicContinuationReply(topic, text, todayEntry, history);
+    if (!hasSimilarBuddyReply(continuation, history)) return continuation;
+  }
+
+  return reply;
+}
+
+function isProtectedBuddyReply(reply) {
+  return [BUDDY_CRISIS_REPLY, BUDDY_LANGUAGE_REPLY, BUDDY_SCOPE_REPLY, BUDDY_UNCLEAR_REPLY].includes(reply);
+}
+
+function hasSimilarBuddyReply(reply, history = []) {
+  const signature = getBuddyReplySignature(reply);
+
+  return history
+    .filter((message) => message.role === "buddy")
+    .slice(-8)
+    .some((message) => {
+      const previousSignature = getBuddyReplySignature(message.text);
+      return previousSignature === signature || previousSignature.slice(0, 58) === signature.slice(0, 58);
+    });
+}
+
+function getBuddyReplySignature(reply) {
+  return normalizeBuddyText(reply)
+    .replace(/kleine stap:.+$/g, "")
+    .replace(/reflectievraag:.+$/g, "")
+    .replace(/\s+/g, " ")
+    .slice(0, 140);
+}
+
+function shouldDeepenConversation(topic, text, history = []) {
+  if (!topic || topic === "general") return false;
+  if (detectGreetingMessage(text) || detectThanksMessage(text) || detectOutOfScopeMessage(text)) return false;
+
+  const topicTurns = countTopicTurns(topic, history);
+  return topicTurns >= 2 && isContextualHealthFollowUp(text);
+}
+
+function countTopicTurns(topic, history = []) {
+  return history
+    .filter((message) => message.role === "user")
+    .map((message) => inferCurrentConversationTopic(normalizeBuddyText(message.text)))
+    .filter((messageTopic) => messageTopic === topic)
+    .length;
+}
+
+function createTopicContinuationReply(topic, text, todayEntry, history = []) {
+  const variants = getTopicContinuationVariants(topic, text, todayEntry);
+  return pickBuddyVariant(variants, history, text);
+}
+
+function pickBuddyVariant(variants, history = [], seedText = "") {
+  const safeVariants = variants.filter(Boolean);
+  if (!safeVariants.length) {
+    return "Ik blijf bij wat je net vertelde. Wat is nu het belangrijkste om iets beter te begrijpen?\n\nKleine stap: kies één klein onderdeel om vandaag mee te beginnen.";
+  }
+
+  const offset = getTextSeed(seedText) % safeVariants.length;
+  const ordered = [...safeVariants.slice(offset), ...safeVariants.slice(0, offset)];
+  return ordered.find((variant) => !hasSimilarBuddyReply(variant, history)) || ordered[0];
+}
+
+function getTextSeed(text) {
+  return [...String(text || "")].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+}
+
+function getTopicContinuationVariants(topic, text, todayEntry) {
+  if (topic === "pain") {
+    return [
+      "Ik blijf even bij die pijn, maar stel hem iets concreter. Sinds wanneer merk je het, en is het erger, hetzelfde of minder geworden?\n\nKleine stap: geef de pijn een cijfer van 0 tot 10 en forceer de plek vandaag niet.",
+      "Laten we dit praktisch bekijken. Welke beweging of houding maakt de pijn duidelijk erger?\n\nKleine stap: vermijd die beweging vandaag en kijk of rust verschil maakt.",
+      "Dat vraagt om beter onderscheid: voelt het scherp, zeurend, brandend of stijf?\n\nKleine stap: noteer dat kort. Neem medische hulp als het heftig wordt, uitstraalt of samengaat met benauwdheid of krachtverlies.",
+    ];
+  }
+
+  if (topic === "body") {
+    return [
+      "Ik blijf bij je lichaamssignaal. Is het vooral energie, misselijkheid, duizeligheid, ademhaling of iets anders?\n\nKleine stap: doe het rustiger en kijk wat het signaal duidelijk erger of minder maakt.",
+      "Laten we zoeken naar patroon. Begon dit na slaap, eten, stress, beweging of kwam het zomaar op?\n\nKleine stap: schrijf één mogelijke trigger op.",
+      "Je lichaam geeft informatie, maar we hoeven het niet meteen te verklaren. Wat valt het meest op: intensiteit, plek of timing?\n\nKleine stap: houd het vandaag simpel en vraag hulp als het verergert.",
+    ];
+  }
+
+  if (topic === "stress") {
+    return [
+      "We blijven even bij de druk. Wat is het echte knelpunt: te veel taken, te weinig rust, of iets met mensen?\n\nKleine stap: kies één ding dat vandaag mag wachten.",
+      "Ik hoor vooral dat je systeem volloopt. Wat zou nu het meeste lucht geven: iets schrappen, iets uitspreken of even pauzeren?\n\nKleine stap: haal één prikkel weg voor 10 minuten.",
+      "Laten we het kleiner maken. Welke gedachte blijft het hardst terugkomen?\n\nKleine stap: schrijf die gedachte op en zet er één haalbare actie naast.",
+    ];
+  }
+
+  if (topic === "mood") {
+    return [
+      "Ik blijf bij je stemming. Is het vooral verdriet, boosheid, leegte, schaamte of spanning?\n\nKleine stap: geef het één naam zonder het meteen te hoeven oplossen.",
+      "Dit hoeft niet meteen weg. Wat maakte dit gevoel vandaag sterker?\n\nKleine stap: haal één eis van jezelf af voor de rest van de dag.",
+      "Als je dit aan iemand zou uitleggen, wat zou je willen dat diegene begrijpt?\n\nKleine stap: schrijf die zin kort op.",
+    ];
+  }
+
+  if (topic === "sleep") {
+    return [
+      "We blijven bij slaap. Gaat het vooral om inslapen, doorslapen of wakker worden zonder energie?\n\nKleine stap: kies vanavond één vaste afrondtijd.",
+      "Slaap werkt door in je hele dag. Wat merkte je vandaag het meest: minder focus, sneller stress of minder geduld?\n\nKleine stap: plan één rustmoment zonder scherm.",
+      `Als je moe bent, hoeft je dag kleiner te zijn. ${todayEntry?.sleepHours > 0 ? `Je noteerde ${todayEntry.sleepHours} uur slaap.` : "Wat was ongeveer je slaap vannacht?"}\n\nKleine stap: kies alleen de lichtste versie van je belangrijkste taak.`,
+    ];
+  }
+
+  if (topic === "focus") {
+    return [
+      "Ik blijf bij focus. Is het lastig om te starten, te kiezen of vol te houden?\n\nKleine stap: maak de eerste handeling zo klein dat je hem binnen twee minuten kunt doen.",
+      "Focus zakt vaak als er te veel keuze is. Wat is nu de ene taak die het meest telt?\n\nKleine stap: leg alleen die taak zichtbaar klaar.",
+      "Laten we niet harder duwen, maar slimmer starten. Wat leidt je het meest af?\n\nKleine stap: haal die afleiding 10 minuten uit beeld.",
+    ];
+  }
+
+  if (topic === "food") {
+    return [
+      "We blijven bij voeding. Gaat het vooral om te weinig eten, onregelmatig eten of weinig energie?\n\nKleine stap: kies iets simpels dat je makkelijk kunt nemen.",
+      "Voeding hoeft niet perfect om steun te geven. Wat is de makkelijkste optie die je nu beschikbaar hebt?\n\nKleine stap: drink water en neem iets kleins als dat lukt.",
+      "Als eten lastig voelt, maak het kleiner. Is er iets lichts dat je lichaam meestal wel accepteert?\n\nKleine stap: kies dat zonder er een perfecte maaltijd van te maken.",
+    ];
+  }
+
+  return [
+    "Ik blijf even bij wat je vertelt. Wat is nu het belangrijkste: begrijpen wat er gebeurt, rust krijgen, of een volgende stap kiezen?\n\nKleine stap: kies één van die drie.",
+    "Laten we het gesprek vasthouden. Wat is er veranderd sinds je eerste bericht?\n\nKleine stap: benoem één verschil, ook als het klein is.",
+    "Ik wil niet te snel invullen. Wat klopt er wel aan wat ik net zei, en wat mist er nog?\n\nKleine stap: verbeter mij met één korte zin.",
+  ];
+}
+
 function getLastBuddyMessage(history) {
   return [...history].reverse().find((message) => message.role === "buddy")?.text || "";
 }
 
 function getRecentConversationText(history) {
   return history
+    .filter((message) => message.role === "user")
     .slice(-6)
     .map((message) => message.text)
     .join(" ");
@@ -1213,8 +1576,9 @@ function inferConversationTopic(text, history) {
 function inferCurrentConversationTopic(text) {
   if (mentionsPhysicalSymptom(text)) return "body";
   if (mentionsPhysicalPain(text)) return "pain";
+  if (mentionsPanic(text)) return "stress";
   if (mentionsCraving(text) || mentionsRelapse(text)) return "stress";
-  if (mentionsRelationshipStress(text) || mentionsRumination(text) || mentionsOverstimulated(text)) return "stress";
+  if (mentionsRelationshipStress(text) || mentionsRumination(text) || mentionsOverstimulated(text) || mentionsGrief(text) || mentionsLoneliness(text)) return "stress";
   if (mentionsLowMotivation(text)) return "focus";
   if (mentionsAnger(text)) return "mood";
   if (mentionsPressure(text)) return "stress";
@@ -1242,6 +1606,9 @@ function isContextualHealthFollowUp(text) {
   if (
     mentionsPhysicalPain(text) ||
     mentionsPhysicalSymptom(text) ||
+    mentionsPanic(text) ||
+    mentionsGrief(text) ||
+    mentionsLoneliness(text) ||
     mentionsRelationshipStress(text) ||
     mentionsRumination(text) ||
     mentionsOverstimulated(text) ||
@@ -1461,7 +1828,7 @@ function detectOutOfScopeMessage(message) {
 
 function detectGreetingMessage(message) {
   const text = normalizeBuddyText(message).replace(/[!.?]+$/g, "");
-  return /^(hoi|hallo|hey|heey|hi|hai|hello|yo|goedemorgen|goedemiddag|goedenavond)( buddy| balans buddy)?$/.test(text);
+  return /^(hoi|hallo|hey|heey|hi|hai|hello|yo|goedemorgen|goedemiddag|goedenavond)( buddy| balans buddy| feelbetter buddy)?$/.test(text);
 }
 
 function detectThanksMessage(message) {
@@ -1477,6 +1844,21 @@ function detectCapabilityQuestion(message) {
 function detectBotFeelingQuestion(message) {
   const text = normalizeBuddyText(message);
   return /hoe gaat het met jou|hoe voel jij|hoe voel je je|alles goed met jou/.test(text);
+}
+
+function detectDiagnosisRequest(text) {
+  return (
+    /\b(heb ik|ben ik|is dit|wat heb ik|denk je dat ik|is er iets mis met mij|is er iets mis met me)\b.{0,45}\b(depressie|burnout|burn-out|angststoornis|adhd|autisme|stoornis|ziekte|blessure|hernia|diagnose)\b/.test(text) ||
+    /\bdiagnose\b/.test(text) ||
+    /\bwat is er mis met (mij|me)\b/.test(text)
+  );
+}
+
+function detectHealthInfoQuestion(text) {
+  return (
+    /^(waarom|hoe werkt|wat doet|wat betekent|hoe komt het dat|kan .* invloed hebben|is het normaal dat|waardoor)\b/.test(text) &&
+    mentionsBuddyScope(text)
+  );
 }
 
 function detectUncertaintyMessage(message) {
@@ -1559,6 +1941,42 @@ function createNegativeWellbeingReply(text) {
   return "Dat klinkt niet fijn. Wat drukt vandaag het meest op je: je hoofd, je lichaam of iets dat moet?\n\nKleine stap: kies één kleine handeling die nu haalbaar is.";
 }
 
+function createDiagnosisBoundaryReply(text) {
+  if (mentionsPhysicalPain(text) || mentionsPhysicalSymptom(text)) {
+    return "Ik kan niet vaststellen wat je precies hebt. Ik kan wel helpen ordenen wat je merkt: waar zit het, sinds wanneer speelt het, en wat maakt het erger?\n\nKleine stap: neem contact op met een arts als het heftig is, erger wordt, of je normale dingen beperkt.";
+  }
+
+  return "Ik kan geen diagnose geven. Wat ik wel kan doen: samen kijken wat je merkt, wanneer het erger wordt en welke kleine stap nu helpt.\n\nKleine stap: beschrijf in één zin wat je het meest merkt in je hoofd of lichaam.";
+}
+
+function createHealthInfoReply(text) {
+  if (mentionsSleep(text)) {
+    return "Slaap heeft veel invloed op focus, stemming en herstel. Bij weinig slaap voelt dezelfde dag vaak zwaarder.\n\nReflectievraag: merk je vooral minder energie, sneller stress, of minder focus?\n\nKleine stap: kies vanavond één vaste afrondtijd.";
+  }
+
+  if (mentionsFood(text)) {
+    return "Voeding kan invloed hebben op energie, concentratie en hoe stabiel je je voelt. Het hoeft niet perfect; regelmatig en simpel helpt vaak al.\n\nReflectievraag: eet je vooral te weinig, te laat, of te onregelmatig?\n\nKleine stap: maak één makkelijke basismaaltijd beschikbaar.";
+  }
+
+  if (mentionsCraving(text) || mentionsRelapse(text)) {
+    return "Trek of verleiding komt vaak in golven. Het voelt urgent, maar het zakt meestal als je niet meteen handelt.\n\nReflectievraag: wat triggert het meestal: plek, gevoel, persoon of gewoonte?\n\nKleine stap: stel 10 minuten uit en verander direct van omgeving.";
+  }
+
+  if (mentionsPressure(text) || mentionsRumination(text) || mentionsOverstimulated(text)) {
+    return "Stress is niet alleen mentaal; je lichaam gaat ook in actiestand. Daardoor voelt kiezen, starten of rustig blijven moeilijker.\n\nReflectievraag: zit de druk vooral in je agenda, je hoofd of je lichaam?\n\nKleine stap: haal één prikkel of taak uit de komende 10 minuten.";
+  }
+
+  if (mentionsFocus(text)) {
+    return "Focus wordt vaak slechter door te veel keuze, te weinig energie of te veel prikkels. Harder je best doen is dan niet altijd de oplossing.\n\nReflectievraag: is starten, kiezen of volhouden nu het lastigst?\n\nKleine stap: begin met alleen de eerste zichtbare handeling.";
+  }
+
+  if (mentionsPhysicalPain(text) || mentionsPhysicalSymptom(text)) {
+    return "Lichamelijke signalen zijn informatie, geen bewijs voor één oorzaak. Let op patroon: wanneer begon het, wat maakt het erger, wat maakt het minder?\n\nKleine stap: noteer dat kort. Bel een arts bij heftige, nieuwe of verergerende klachten.";
+  }
+
+  return "Gezondheid gaat vaak over het samenspel tussen lichaam, hoofd en gewoontes. Eén signaal zegt niet alles, maar patronen kunnen veel duidelijk maken.\n\nReflectievraag: welk signaal merk je vandaag het sterkst?\n\nKleine stap: schrijf één observatie op zonder oordeel.";
+}
+
 function createTiredReply(todayEntry) {
   if (todayEntry?.sleepHours > 0 && todayEntry.sleepHours < 6) {
     return "Dat past bij je korte slaap. Vandaag hoeft niet op volle kracht. Wat moet echt, en wat mag wachten?\n\nKleine stap: kies de lichtste versie van je belangrijkste taak.";
@@ -1577,6 +1995,22 @@ function createLifeDomainReply(text) {
   }
 
   return "Vertel eens, wat maakt dat dit vandaag zo aanwezig is?\n\nKleine stap: benoem één ding dat je hierin nodig hebt.";
+}
+
+function createPanicReply(text) {
+  if (/pijn op de borst|borstpijn|benauwd|flauw|flauwvallen|krachtverlies/.test(text)) {
+    return "Dat wil ik serieus nemen. Bij pijn op de borst, benauwdheid, flauwvallen of krachtverlies: bel 112 bij direct gevaar of neem direct contact op met medische hulp.";
+  }
+
+  return "Dat klinkt heel onrustig. Paniek of veel spanning kan je lichaam laten voelen alsof er direct gevaar is, ook als je eerst alleen hoeft te vertragen.\n\nReflectievraag: wat merk je het sterkst: ademhaling, hartslag, gedachten of spanning in je lijf?\n\nKleine stap: zet beide voeten op de grond en adem drie keer rustig uit, langer dan je inademt.";
+}
+
+function createGriefReply(text) {
+  return "Dat klinkt als verlies of gemis, en dat kan op onverwachte momenten zwaar binnenkomen. Je hoeft dat niet netjes of snel op te lossen.\n\nReflectievraag: wat mis je vandaag het meest?\n\nKleine stap: doe één klein ding dat ruimte geeft aan dat gevoel, zonder jezelf te forceren.";
+}
+
+function createLonelinessReply(text) {
+  return "Eenzaamheid kan stil en zwaar voelen, ook als er mensen om je heen zijn. Het is logisch dat praten dan moeilijker wordt.\n\nReflectievraag: wil je nu vooral contact, rust, of gewoon even erkenning?\n\nKleine stap: stuur één laagdrempelig bericht naar iemand die veilig voelt.";
 }
 
 function createRelationshipStressReply(text) {
@@ -1685,6 +2119,18 @@ function mentionsPressure(text) {
 
 function mentionsRelationshipStress(text) {
   return /ruzie|conflict|gedoe met|irritatie met|relatie|partner|vriendin|vriend|familie|ouders|thuis|collega|baas|manager/.test(text);
+}
+
+function mentionsPanic(text) {
+  return /paniek|paniekaanval|hartslag|hartklopping|hyperventil|ademhaling|kortademig|benauwd|ik raak in paniek|ik word bang|angstaanval/.test(text);
+}
+
+function mentionsGrief(text) {
+  return /rouw|overleden|gestorven|dood gegaan|doodgegaan|gemis|ik mis|verlies|verloren|afscheid/.test(text);
+}
+
+function mentionsLoneliness(text) {
+  return /eenzaam|alleen voelen|voel me alleen|niemand begrijpt|niemand snapt|geen steun|alleen voor/.test(text);
 }
 
 function mentionsRumination(text) {
@@ -1806,6 +2252,9 @@ function mentionsBuddyScope(text) {
     mentionsSelfCriticism(text) ||
     mentionsPhysicalPain(text) ||
     mentionsPhysicalSymptom(text) ||
+    mentionsPanic(text) ||
+    mentionsGrief(text) ||
+    mentionsLoneliness(text) ||
     mentionsRelationshipStress(text) ||
     mentionsRumination(text) ||
     mentionsOverstimulated(text) ||
@@ -1961,7 +2410,7 @@ function getHomePracticalReminder({ checkIn, journalEntry, quitTracker }) {
 
   return {
     lesson: "Je overzicht is nog leeg omdat er nog niets is ingevuld.",
-    action: "Begin met één dagboekregel of vul je daggegevens kort in.",
+    action: "Vul je daggegevens kort in en schrijf vanavond één reflectieregel.",
   };
 }
 
@@ -1988,7 +2437,7 @@ function getSimplePersonalInsight(entries) {
   if (validEntries.length < 3) {
     return {
       title: "Check nog een paar dagen in om persoonlijke patronen te ontdekken.",
-      explanation: "Vanaf drie check-ins kan Balans simpele verbanden herkennen.",
+      explanation: "Vanaf drie check-ins kan Feelbetter simpele verbanden herkennen.",
       action: "",
     };
   }
@@ -2170,7 +2619,7 @@ function createWeeklyAnalysis(checkIns) {
   if (!daysFilled) {
     return {
       good: "Je hebt nog geen check-ins deze week. Er is nog geen patroon om te bekijken.",
-      improve: "Begin met één korte check-in. Daarna kan Balans betere weekinzichten tonen.",
+      improve: "Begin met één korte check-in. Daarna kan Feelbetter betere weekinzichten tonen.",
       focus: "Vul vandaag je eerste check-in in.",
     };
   }

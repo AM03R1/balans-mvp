@@ -1,7 +1,7 @@
 {
   "name": "Feelbetter",
   "short_name": "Feelbetter",
-  "description": "Dagboek, voortgang bijhouden en rustig reflecteren met Balans Buddy.",
+  "description": "Dagboek, voortgang bijhouden en rustig reflecteren met Feelbetter Buddy.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

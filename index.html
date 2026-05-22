@@ -12,14 +12,14 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="public/app-icon.png" />
     <link rel="apple-touch-icon" href="public/app-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=diary-browse-days-20260520" />
+    <link rel="stylesheet" href="styles.css?v=test-ready-20260522" />
   </head>
   <body>
     <main class="app-shell">
       <header class="app-topbar" data-build="scroll-away-topbar-20260517-1152" aria-live="polite">
         <div class="app-topbar-copy">
           <p class="eyebrow" id="topbar-eyebrow">Feelbetter</p>
-          <h1 id="topbar-title">Overzicht</h1>
+          <h1 id="topbar-title">Vandaag</h1>
           <p class="date-label" id="topbar-date"></p>
         </div>
         <button class="settings-icon-button" type="button" data-screen="settings" aria-label="Instellingen">
@@ -114,6 +114,21 @@
             </label>
           </div>
 
+          <div class="card settings-card tester-card">
+            <div>
+              <p class="analysis-label">Testversie</p>
+              <h2>Feedback verzamelen</h2>
+              <p>Vraag testers vooral of de app duidelijk, rustig en nuttig genoeg voelt om meerdere dagen te gebruiken.</p>
+            </div>
+
+            <div class="feedback-list">
+              <p>1. Snap je direct wat je vandaag kunt doen?</p>
+              <p>2. Voelt de Buddy logisch en veilig?</p>
+              <p>3. Zou je dagboek of voortgang morgen opnieuw openen?</p>
+              <p>4. Wat moet eruit voordat de app rustiger voelt?</p>
+            </div>
+          </div>
+
           <div class="card settings-card">
             <div>
               <h2>Lokale data</h2>
@@ -129,12 +144,12 @@
     </main>
 
     <nav class="bottom-nav" aria-label="Navigatie">
-      <button type="button" data-screen="today" class="active">Home</button>
+      <button type="button" data-screen="today" class="active">Vandaag</button>
       <button type="button" data-screen="journal">Dagboek</button>
       <button type="button" data-screen="week">Voortgang</button>
       <button type="button" data-screen="buddy">Buddy</button>
     </nav>
 
-    <script src="app.js?v=diary-browse-days-20260520"></script>
+    <script src="app.js?v=test-ready-20260522"></script>
   </body>
 </html>
