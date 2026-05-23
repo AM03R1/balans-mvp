@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Feedback Feelbetter</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f7fb;
+        --card: #ffffff;
+        --text: #1f2933;
+        --muted: #667085;
+        --line: #dde3ea;
+        --primary: #6603fc;
+        --primary-dark: #4f02c4;
+        --soft: #efe7ff;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      main {
+        width: min(100%, 46rem);
+        margin: 0 auto;
+        padding: 24px 16px 44px;
+      }
+
+      header,
+      section {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--card);
+        padding: 20px;
+        box-shadow: 0 18px 45px rgba(31, 41, 51, 0.08);
+      }
+
+      header {
+        margin-bottom: 14px;
+        background:
+          linear-gradient(135deg, rgba(102, 3, 252, 0.1), rgba(140, 92, 255, 0.04)),
+          var(--card);
+      }
+
+      .stack {
+        display: grid;
+        gap: 14px;
+      }
+
+      .eyebrow {
+        margin: 0 0 6px;
+        color: var(--primary);
+        font-size: 0.78rem;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 8px;
+        font-size: clamp(2rem, 7vw, 3.4rem);
+        line-height: 1;
+      }
+
+      h2 {
+        margin-bottom: 4px;
+        font-size: 1.12rem;
+      }
+
+      p {
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      label,
+      fieldset {
+        display: grid;
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+
+      label > span,
+      legend {
+        color: var(--text);
+        font-size: 0.92rem;
+        font-weight: 850;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #ffffff;
+        color: var(--text);
+        padding: 12px;
+        font: inherit;
+        outline: none;
+      }
+
+      textarea {
+        min-height: 104px;
+        resize: vertical;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(102, 3, 252, 0.13);
+      }
+
+      .options {
+        display: grid;
+        gap: 8px;
+      }
+
+      .option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 12px;
+      }
+
+      .option input {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 auto;
+      }
+
+      .option span {
+        font-weight: 750;
+      }
+
+      .scale {
+        display: grid;
+        grid-template-columns: repeat(10, minmax(0, 1fr));
+        gap: 5px;
+      }
+
+      .scale label {
+        display: grid;
+        place-items: center;
+        min-height: 38px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 900;
+      }
+
+      .scale input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .scale label:has(input:checked) {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: #ffffff;
+      }
+
+      button {
+        width: 100%;
+        min-height: 48px;
+        border: 0;
+        border-radius: 10px;
+        background: var(--primary);
+        color: #ffffff;
+        padding: 12px 16px;
+        font: inherit;
+        font-weight: 900;
+      }
+
+      button.secondary {
+        border: 1px solid var(--line);
+        background: #ffffff;
+        color: var(--text);
+      }
+
+      .result {
+        min-height: 180px;
+        background: var(--soft);
+        font-size: 0.92rem;
+      }
+
+      .hint {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 0.86rem;
+        font-weight: 700;
+      }
+
+      @media (max-width: 420px) {
+        header,
+        section {
+          padding: 18px;
+        }
+
+        .scale {
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="stack">
+      <header>
+        <p class="eyebrow">Feelbetter testversie</p>
+        <h1>Feedback formulier</h1>
+        <p>
+          Bedankt dat je Feelbetter test. Dit formulier gaat niet over je persoonlijke gezondheid,
+          maar over of de app duidelijk, rustig en nuttig voelt.
+        </p>
+      </header>
+
+      <section class="stack">
+        <h2>Tester</h2>
+        <label>
+          <span>Naam</span>
+          <input id="name" type="text" autocomplete="name" />
+        </label>
+
+        <label>
+          <span>Waarop heb je getest?</span>
+          <select id="device">
+            <option value="">Kies een optie</option>
+            <option>iPhone</option>
+            <option>Android</option>
+            <option>Laptop/computer</option>
+            <option>Anders</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Heb je de app op je beginscherm gezet?</span>
+          <select id="homescreen">
+            <option value="">Kies een optie</option>
+            <option>Ja</option>
+            <option>Nee</option>
+            <option>Nee, ik wist niet hoe</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="stack">
+        <h2>Scores</h2>
+
+        <fieldset>
+          <legend>Hoe duidelijk was het wat je kon doen? 1 = onduidelijk, 10 = heel duidelijk</legend>
+          <div class="scale" data-scale="clarity"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Hoe rustig en overzichtelijk voelde de app? 1 = druk, 10 = heel rustig</legend>
+          <div class="scale" data-scale="calm"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Zou je de app morgen opnieuw openen?</legend>
+          <div class="options">
+            <label class="option"><input name="return" type="radio" value="Ja" /><span>Ja</span></label>
+            <label class="option"><input name="return" type="radio" value="Misschien" /><span>Misschien</span></label>
+            <label class="option"><input name="return" type="radio" value="Nee" /><span>Nee</span></label>
+          </div>
+        </fieldset>
+      </section>
+
+      <section class="stack">
+        <h2>Onderdelen</h2>
+
+        <fieldset>
+          <legend>Welke onderdelen heb je getest?</legend>
+          <div class="options">
+            <label class="option"><input name="parts" type="checkbox" value="Vandaag / Home" /><span>Vandaag / Home</span></label>
+            <label class="option"><input name="parts" type="checkbox" value="Dagboek" /><span>Dagboek</span></label>
+            <label class="option"><input name="parts" type="checkbox" value="Voortgang" /><span>Voortgang</span></label>
+            <label class="option"><input name="parts" type="checkbox" value="Buddy" /><span>Buddy</span></label>
+            <label class="option"><input name="parts" type="checkbox" value="Instellingen" /><span>Instellingen</span></label>
+          </div>
+        </fieldset>
+
+        <label>
+          <span>Welk onderdeel vond je het meest nuttig?</span>
+          <select id="best-part">
+            <option value="">Kies een optie</option>
+            <option>Vandaag / Home</option>
+            <option>Dagboek</option>
+            <option>Voortgang</option>
+            <option>Buddy</option>
+            <option>Geen van deze</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Hoe voelde de Buddy?</span>
+          <select id="buddy-feeling">
+            <option value="">Kies een optie</option>
+            <option>Logisch en helpend</option>
+            <option>Soms goed, soms niet</option>
+            <option>Onlogisch</option>
+            <option>Niet getest</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="stack">
+        <h2>Open feedback</h2>
+
+        <label>
+          <span>Wat vond je goed aan de app?</span>
+          <textarea id="good"></textarea>
+        </label>
+
+        <label>
+          <span>Wat vond je onduidelijk, druk of overbodig?</span>
+          <textarea id="unclear"></textarea>
+        </label>
+
+        <label>
+          <span>Ben je bugs of dingen tegengekomen die niet werkten?</span>
+          <textarea id="bugs"></textarea>
+        </label>
+
+        <label>
+          <span>Wat zou volgens jou als eerste verbeterd moeten worden?</span>
+          <textarea id="improve"></textarea>
+        </label>
+      </section>
+
+      <section class="stack">
+        <h2>Feedbacktekst maken</h2>
+        <button type="button" onclick="createFeedbackText()">Maak feedbacktekst</button>
+        <textarea class="result" id="result" readonly placeholder="Hier verschijnt de tekst die je kunt kopiëren en terugsturen."></textarea>
+        <button class="secondary" type="button" onclick="copyFeedbackText()">Kopieer feedbacktekst</button>
+        <p class="hint">Als kopiëren niet automatisch lukt, houd de tekst ingedrukt en kopieer handmatig.</p>
+      </section>
+    </main>
+
+    <script>
+      const scaleContainers = document.querySelectorAll("[data-scale]");
+
+      scaleContainers.forEach((container) => {
+        const name = container.dataset.scale;
+
+        container.innerHTML = Array.from({ length: 10 }, (_, index) => {
+          const value = index + 1;
+          return `
+            <label>
+              <input name="${name}" type="radio" value="${value}" />
+              ${value}
+            </label>
+          `;
+        }).join("");
+      });
+
+      function value(selector) {
+        return document.querySelector(selector)?.value.trim() || "-";
+      }
+
+      function checkedValue(name) {
+        return document.querySelector(`input[name="${name}"]:checked`)?.value || "-";
+      }
+
+      function checkedValues(name) {
+        const values = [...document.querySelectorAll(`input[name="${name}"]:checked`)].map((input) => input.value);
+        return values.length ? values.join(", ") : "-";
+      }
+
+      function createFeedbackText() {
+        const feedback = [
+          "Feedback Feelbetter",
+          "",
+          `Naam: ${value("#name")}`,
+          `Apparaat: ${value("#device")}`,
+          `Op beginscherm gezet: ${value("#homescreen")}`,
+          "",
+          `Duidelijkheid 1-10: ${checkedValue("clarity")}`,
+          `Rust/overzicht 1-10: ${checkedValue("calm")}`,
+          `Opnieuw openen morgen: ${checkedValue("return")}`,
+          "",
+          `Geteste onderdelen: ${checkedValues("parts")}`,
+          `Meest nuttige onderdeel: ${value("#best-part")}`,
+          `Buddy gevoel: ${value("#buddy-feeling")}`,
+          "",
+          `Goed aan de app: ${value("#good")}`,
+          "",
+          `Onduidelijk/druk/overbodig: ${value("#unclear")}`,
+          "",
+          `Bugs of dingen die niet werkten: ${value("#bugs")}`,
+          "",
+          `Eerste verbetering: ${value("#improve")}`,
+        ].join("\n");
+
+        document.querySelector("#result").value = feedback;
+      }
+
+      async function copyFeedbackText() {
+        const result = document.querySelector("#result");
+
+        if (!result.value.trim()) {
+          createFeedbackText();
+        }
+
+        result.focus();
+        result.select();
+
+        try {
+          await navigator.clipboard.writeText(result.value);
+        } catch {
+          document.execCommand("copy");
+        }
+      }
+    </script>
+  </body>
+</html>
